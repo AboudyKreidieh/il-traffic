@@ -1,0 +1,9 @@
+*.csv
+*.pyc
+*il_traffic.egg-info/
+__pycache__
+*zip
+debug
+*.idea/
+*.ipynb_checkpoints/
+*data/
