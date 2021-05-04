@@ -280,7 +280,7 @@ class FollowerStopper(VelocityController):
         elif headway <= dx_3:
             v_cmd = v + (self.v_des - v) * (headway - dx_2) / (dx_3 - dx_2)
         else:
-            v_cmd = self.v_des
+            v_cmd = self.v_des + 0.001 * (headway - dx_3) ** 2
 
         self.v_cmd = v_cmd
 
@@ -469,9 +469,9 @@ class TimeHeadwayFollowerStopper(VelocityController):
         elif headway <= dx_3:
             v_cmd = v + (self.v_des - v) * (headway - dx_2) / (dx_3 - dx_2)
         else:
-            v_cmd = self.v_des
+            v_cmd = self.v_des + 0.001 * (headway - dx_3) ** 2
 
-        self.v_cmd = v_cmd + 0.001 * (headway - dx_3) ** 2
+        self.v_cmd = v_cmd
 
         # Compute the acceleration from the desired velocity.
         return self._get_accel_from_v_des(speed=speed, v_des=self.v_cmd)
