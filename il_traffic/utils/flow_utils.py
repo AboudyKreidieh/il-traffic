@@ -292,6 +292,7 @@ def get_rl_env_params(env_name):
 
     # Compute the additional dictionary parameters.
     env_params = {
+        "train_vdes": True,  # TODO
         "warmup_path": os.path.join(
             config.PROJECT_PATH, "warmup/{}".format(env_name)),
         'rl_penetration': 0.05,

@@ -175,24 +175,17 @@ class Sampler(object):
             * env_num : the environment number
             * info : the info dict
             * expert_action : the action that would be performed by the expert
-            * expert_goal : the goal that would be performed by the expert
         """
-        # Get the names of the controlled vehicles.
-        controlled_rl_ids = deepcopy(self.env.rl_ids)
-
         # Ensure that all AVs are in the dictionary to begin with.
+        controlled_rl_ids = deepcopy(self.env.rl_ids)
         for veh_id in controlled_rl_ids:
             if veh_id not in self.env.av_controllers_dict.keys():
                 controller = deepcopy(self.env._av_controller)
                 controller.veh_id = veh_id
                 self.env.av_controllers_dict[veh_id] = deepcopy(controller)
 
-        expert_action = [
-            [self.env.av_controllers_dict[veh_id].get_action(self.env)]
-            for veh_id in controlled_rl_ids]
-        expert_goal = [
-            [self.env.av_controllers_dict[veh_id].expert.v_des]
-            for veh_id in controlled_rl_ids] if self.expert > 0 else None
+        # Query the expert for its desired action.
+        expert_action = self.env.query_expert()
 
         # Execute the next action.
         next_obs, reward, done, info = self.env.step(action)
@@ -214,7 +207,6 @@ class Sampler(object):
             "env_num": self.env_num,
             "info": info,
             "expert_action": expert_action,
-            "expert_goal": expert_goal,
         }
 
 

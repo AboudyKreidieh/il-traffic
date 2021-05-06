@@ -98,7 +98,6 @@ class DAgger(object):
         * obs (list of array_like) : list of observation collected from various
           rollouts
         * actions (list of array_like) : list of actions from the expert policy
-        * goals (list of array_like) : list of goals from the expert policy
     returns : list of float
         a list of cumulative returns from all rollouts. Used for logging
         purposes.
@@ -242,7 +241,6 @@ class DAgger(object):
         self.samples = {
             "obs": deque(maxlen=self.buffer_size),
             "actions": deque(maxlen=self.buffer_size),
-            "goals": deque(maxlen=self.buffer_size),
         }
         self.returns = []
         self._info_keys = None
@@ -487,7 +485,6 @@ class DAgger(object):
             for ret_i in ret:
                 num = ret_i["env_num"]
                 expert_action = ret_i["expert_action"]
-                expert_goal = ret_i["expert_goal"]
                 reward = ret_i["reward"]
                 obs0 = ret_i["obs0"]
                 obs1 = ret_i["obs1"]
@@ -507,8 +504,6 @@ class DAgger(object):
                     self.samples["obs"].append(obs0[i])
                     # store expert action
                     self.samples["actions"].append(expert_action[i])
-                    # store expert goal
-                    self.samples["goals"].append(expert_goal[i])
 
                 # Handle episode done.
                 if done[num]:

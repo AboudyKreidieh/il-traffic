@@ -14,6 +14,7 @@ from flow.core.util import ensure_dir
 
 from il_traffic.core.experts import FlowExpertModel
 from il_traffic.core.experts import IntelligentDriverModel
+from il_traffic.core.experts import TimeHeadwayFollowerStopper
 
 ADDITIONAL_ENV_PARAMS = dict(
     # the controller to use
@@ -50,6 +51,9 @@ OPEN_PARAMS = dict(
     # the AV penetration rate, defining the portion of inflow vehicles that
     # will be automated. If "inflows" is set to None, this is irrelevant.
     rl_penetration=0.05,
+    # whether to learn a policy that outputs desired speeds. If not, the policy
+    # outputs desired accelerations.
+    train_vdes=False,
 )
 
 # These edges have an extra lane that RL vehicles do not traverse (since they
@@ -95,6 +99,8 @@ class ControllerEnv(Env):
     * rl_penetration: the AV penetration rate, defining the portion of inflow
       vehicles that will be automated. If "inflows" is set to None, this is
       irrelevant.
+    * train_vdes: whether to learn a policy that outputs desired speeds. If
+      not, the policy outputs desired accelerations.
     """
 
     def __init__(self,
@@ -181,6 +187,18 @@ class ControllerEnv(Env):
             ] if self._controller_cls != IntelligentDriverModel else None,
         )
         self.av_controllers_dict = {}
+
+        # =================================================================== #
+        # Follower Stopper wrapper when training for desired speeds.          #
+        # =================================================================== #
+
+        self._fs_wrapper = TimeHeadwayFollowerStopper(
+            v_des=0.,
+            max_accel=env_params.additional_params["max_accel"],
+            max_decel=env_params.additional_params["max_decel"],
+            noise=0,
+            sim_step=self.sim_step,
+        )
 
         # =================================================================== #
         # Features used for the reset and info_dict logging operations.       #
@@ -274,7 +292,12 @@ class ControllerEnv(Env):
                 self.k.vehicle.apply_acceleration(veh_id, acceleration)
 
         if rl_actions is not None:
-            accel = rl_actions.flatten()
+            if self.env_params.additional_params["train_vdes"]:
+                # Compute the acceleration from the desired speed.
+                v_des = rl_actions.flatten()
+                accel = self._apply_fs_wrapper(v_des, self.rl_ids)
+            else:
+                accel = rl_actions.flatten()
 
             # Apply the failsafe action.
             accel = [
@@ -812,3 +835,58 @@ class ControllerEnv(Env):
         obs[2] = lead_head * HEADWAY_SCALE
 
         return obs
+
+    def _apply_fs_wrapper(self, v_des, veh_ids):
+        """TODO.
+
+        Parameters
+        ----------
+        v_des : array_like
+            list of desired speeds
+        veh_ids : list of str
+            the names of the vehicles
+
+        Returns
+        -------
+        array_like
+            list of desired accelerations
+        """
+        accel = []
+        for veh_id in veh_ids:
+            # Collect some state information.
+            speed = self.k.vehicle.get_speed(veh_id)
+            lead_id = self.k.vehicle.get_leader(veh_id)
+            headway = self.k.vehicle.get_headway(veh_id)
+
+            if lead_id is None or lead_id == '':  # no car ahead
+                # Set some default terms.
+                lead_speed = speed
+                headway = 100
+            else:
+                lead_speed = self.k.vehicle.get_speed(lead_id)
+
+            # Set the desired speed to that of the AV.
+            self._fs_wrapper.set_vdes(
+                speed=speed,
+                headway=headway,
+                lead_speed=lead_speed,
+                v_des=v_des,
+            )
+
+            # Compute the desired acceleration for this vehicle.
+            accel.append(self._fs_wrapper.get_action(
+                speed=speed,
+                headway=headway,
+                lead_speed=lead_speed,
+            ))
+
+        return accel
+
+    def query_expert(self):
+        """TODO."""
+        if self.env_params.additional_params["train_vdes"]:
+            return [[self.av_controllers_dict[veh_id].get_vdes(self)]
+                    for veh_id in self.rl_ids]
+        else:
+            return [[self.av_controllers_dict[veh_id].get_action(self)]
+                    for veh_id in self.rl_ids]

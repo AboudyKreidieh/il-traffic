@@ -263,6 +263,16 @@ class FollowerStopper(VelocityController):
         self.d_2 = 1.0
         self.d_3 = 0.5
 
+    def get_vdes(self, speed, headway, lead_speed):
+        """TODO."""
+        dv_minus = min(lead_speed - speed, 0)
+        dx_3 = self.dx_3_0 + 1 / (2 * self.d_3) * dv_minus ** 2
+
+        if headway < dx_3:
+            return self.v_des
+        else:
+            return self.v_des + 0.001 * (headway - dx_3) ** 2
+
     def get_action(self, speed, headway, lead_speed):
         """See parent class."""
         dv_minus = min(lead_speed - speed, 0)
@@ -452,6 +462,26 @@ class TimeHeadwayFollowerStopper(VelocityController):
         self.h_2 = 1.2
         self.h_3 = 1.8
 
+    def set_vdes(self, speed, headway, lead_speed, v_des):
+        """TODO."""
+        dv_minus = min(lead_speed - speed, 0)
+        dx_3 = self.dx_3_0 + 1 / (2*self.d_3) * dv_minus**2 + self.h_3 * speed
+
+        if headway < dx_3:
+            self.v_des = v_des
+        else:
+            self.v_des = max(v_des - 0.001 * (headway - dx_3) ** 2, 0)
+
+    def get_vdes(self, speed, headway, lead_speed):
+        """TODO."""
+        dv_minus = min(lead_speed - speed, 0)
+        dx_3 = self.dx_3_0 + 1 / (2*self.d_3) * dv_minus**2 + self.h_3 * speed
+
+        if headway < dx_3:
+            return self.v_des
+        else:
+            return self.v_des + 0.001 * (headway - dx_3) ** 2
+
     def get_action(self, speed, headway, lead_speed):
         """See parent class."""
         dv_minus = min(lead_speed - speed, 0)
@@ -525,7 +555,7 @@ class FlowExpertModel(BaseController):
         # Create the expert model.
         self.expert = expert[0](**expert[1])
 
-    def get_accel(self, env):
+    def get_accel(self, env, **kwargs):
         """See parent class."""
         # Collect some state information.
         speed = env.k.vehicle.get_speed(self.veh_id)
@@ -540,6 +570,26 @@ class FlowExpertModel(BaseController):
             lead_speed = env.k.vehicle.get_speed(lead_id)
 
         return self.expert.get_action(
+            speed=speed,
+            headway=headway,
+            lead_speed=lead_speed,
+        )
+
+    def get_vdes(self, env):
+        """TODO."""
+        # Collect some state information.
+        speed = env.k.vehicle.get_speed(self.veh_id)
+        lead_id = env.k.vehicle.get_leader(self.veh_id)
+        headway = env.k.vehicle.get_headway(self.veh_id)
+
+        if lead_id is None or lead_id == '':  # no car ahead
+            # Set some default terms.
+            lead_speed = speed
+            headway = 100
+        else:
+            lead_speed = env.k.vehicle.get_speed(lead_id)
+
+        return self.expert.get_vdes(
             speed=speed,
             headway=headway,
             lead_speed=lead_speed,
