@@ -852,7 +852,7 @@ class ControllerEnv(Env):
             list of desired accelerations
         """
         accel = []
-        for veh_id in veh_ids:
+        for i, veh_id in enumerate(veh_ids):
             # Collect some state information.
             speed = self.k.vehicle.get_speed(veh_id)
             lead_id = self.k.vehicle.get_leader(veh_id)
@@ -870,7 +870,7 @@ class ControllerEnv(Env):
                 speed=speed,
                 headway=headway,
                 lead_speed=lead_speed,
-                v_des=v_des,
+                v_des=v_des[i],
             )
 
             # Compute the desired acceleration for this vehicle.
