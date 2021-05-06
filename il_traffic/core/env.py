@@ -451,12 +451,20 @@ class ControllerEnv(Env):
     @property
     def action_space(self):
         """Return the action space."""
-        return gym.spaces.Box(
-            low=-abs(self.env_params.additional_params["max_decel"]),
-            high=self.env_params.additional_params["max_accel"],
-            shape=(1,),
-            dtype=np.float32,
-        )
+        if self.env_params.additional_params.get("train_vdes", False):
+            return gym.spaces.Box(
+                low=0,
+                high=30,
+                shape=(1,),
+                dtype=np.float32,
+            )
+        else:
+            return gym.spaces.Box(
+                low=-abs(self.env_params.additional_params["max_decel"]),
+                high=self.env_params.additional_params["max_accel"],
+                shape=(1,),
+                dtype=np.float32,
+            )
 
     @property
     def observation_space(self):
