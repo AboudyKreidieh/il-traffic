@@ -514,7 +514,6 @@ class DAgger(object):
                 if done[num]:
                     # Reset the model.
                     if not use_expert:
-                        self.model.reset(num)
                         self.returns.append(totalr[num])
                     totalr[num] = 0
                     num_rollouts += 1

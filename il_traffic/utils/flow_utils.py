@@ -99,8 +99,7 @@ def get_expert_params(network_type,
     Parameters
     ----------
     network_type : str
-        the type of network to simulate. Must be one of {"ring", "highway",
-        "i210"}.
+        the type of network to simulate. Must be one of {"highway", "i210"}.
     network_params : dict
         dictionary of network-specific parameters
     controller_type : int

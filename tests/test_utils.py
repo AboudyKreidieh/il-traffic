@@ -161,10 +161,14 @@ class TestFlowUtils(unittest.TestCase):
             env_params,
             dict(
                 controller_cls=IntelligentDriverModel,
-                control_range=None,
+                control_range=[500, 2300],
                 max_accel=1,
                 max_decel=1,
                 obs_frames=5,
+                frame_skip=5,
+                avg_speed=False,
+                full_history=False,
+                save_video=False,
             ),
         )
 
@@ -193,8 +197,7 @@ class TestFlowUtils(unittest.TestCase):
                 max_accel=1,
                 max_decel=1,
                 noise=0,
-                fail_safe=[
-                    'obey_speed_limit', 'safe_velocity', 'feasible_accel'],
+                sim_step=0.4,
             ),
         )
         del env_params["controller_params"]
@@ -204,10 +207,14 @@ class TestFlowUtils(unittest.TestCase):
             env_params,
             dict(
                 controller_cls=FollowerStopper,
-                control_range=None,
+                control_range=[500, 2300],
                 max_accel=1,
                 max_decel=1,
                 obs_frames=5,
+                frame_skip=5,
+                avg_speed=False,
+                full_history=False,
+                save_video=False,
             ),
         )
 
@@ -236,8 +243,7 @@ class TestFlowUtils(unittest.TestCase):
                 max_decel=1,
                 noise=0,
                 meta_period=10,
-                fail_safe=[
-                    'obey_speed_limit', 'safe_velocity', 'feasible_accel'],
+                sim_step=0.4,
             ),
         )
         del env_params["controller_params"]
@@ -247,10 +253,14 @@ class TestFlowUtils(unittest.TestCase):
             env_params,
             dict(
                 controller_cls=PISaturation,
-                control_range=None,
+                control_range=[500, 2300],
                 max_accel=1,
                 max_decel=1,
                 obs_frames=5,
+                frame_skip=5,
+                avg_speed=False,
+                full_history=False,
+                save_video=False,
             ),
         )
 
@@ -278,9 +288,8 @@ class TestFlowUtils(unittest.TestCase):
                 max_accel=1,
                 max_decel=1,
                 noise=0,
-                meta_period=10,
-                fail_safe=[
-                    'obey_speed_limit', 'safe_velocity', 'feasible_accel'],
+                v_des=5.,
+                sim_step=0.4,
             ),
         )
         del env_params["controller_params"]
@@ -290,10 +299,14 @@ class TestFlowUtils(unittest.TestCase):
             env_params,
             dict(
                 controller_cls=TimeHeadwayFollowerStopper,
-                control_range=None,
+                control_range=[500, 2300],
                 max_accel=1,
                 max_decel=1,
                 obs_frames=5,
+                frame_skip=5,
+                avg_speed=False,
+                full_history=False,
+                save_video=False,
             ),
         )
 
@@ -322,8 +335,7 @@ class TestFlowUtils(unittest.TestCase):
                 max_accel=1,
                 max_decel=1,
                 noise=0,
-                fail_safe=[
-                    'obey_speed_limit', 'safe_velocity', 'feasible_accel'],
+                sim_step=0.4,
             ),
         )
         del env_params["controller_params"]
@@ -337,6 +349,10 @@ class TestFlowUtils(unittest.TestCase):
                 max_accel=1,
                 max_decel=1,
                 obs_frames=5,
+                frame_skip=5,
+                avg_speed=False,
+                full_history=False,
+                save_video=False,
             ),
         )
 
@@ -365,8 +381,7 @@ class TestFlowUtils(unittest.TestCase):
                 max_accel=1,
                 max_decel=1,
                 noise=0,
-                fail_safe=[
-                    'obey_speed_limit', 'safe_velocity', 'feasible_accel'],
+                sim_step=0.4,
             ),
         )
         del env_params["controller_params"]
@@ -380,6 +395,10 @@ class TestFlowUtils(unittest.TestCase):
                 max_accel=1,
                 max_decel=1,
                 obs_frames=5,
+                frame_skip=5,
+                avg_speed=False,
+                full_history=False,
+                save_video=False,
             ),
         )
 
@@ -696,6 +715,7 @@ class TestVisualize(unittest.TestCase):
         d = {
             'time': [0.123456789],
             'id': [0.987654321],
+            'type': [7],
             'speed': [7],
             'headway': [7],
             'target_accel_with_noise_with_failsafe': [7],
