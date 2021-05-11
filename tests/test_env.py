@@ -25,8 +25,10 @@ class TestControllerEnv(unittest.TestCase):
             "max_accel": 1,
             "max_decel": 1,
             "obs_frames": 5,
+            "full_history": 5,
             "warmup_path": None,
-            'rl_penetration': 0.05,
+            "rl_penetration": 0.05,
+            "save_video": False,
         }
 
     def test_init(self):
@@ -132,25 +134,27 @@ class TestControllerEnv(unittest.TestCase):
         # =================================================================== #
 
         self.assertListEqual(
-            env._warmup_paths,
-            []
+            sorted(env._warmup_paths),
+            ['0.xml', '1.xml', '2.xml', '3.xml', '4.xml'],
         )
 
         self.assertDictEqual(
             env._warmup_description,
-            {}
+            {'end_speed': [5.0, 5.0, 5.0, 5.0, 5.0],
+             'inflow': [1900.0, 1900.0, 1950.0, 1950.0, 2000.0],
+             'xml_num': [0.0, 1.0, 2.0, 3.0, 4.0]},
         )
 
         # =================================================================== #
         # test case 2                                                         #
         # =================================================================== #
 
-        self.assertEqual(env.net_params.inflow.get(), 2000)
-        self.assertEqual(env.k.network.get_max_speed(""), 2000)
+        self.assertEqual(env.network.net_params.inflows.get(), 2000)
+        self.assertEqual(env.k.network.get_max_speed("highway_end", 0), 5.0)
 
         env.reset()
 
-        self.assertEqual(env.net_params.inflow.get(), 2000)
+        self.assertEqual(env.network.net_params.inflows.get(), 2000)
         self.assertEqual(env.k.network.get_max_speed(""), 2000)
 
     def test_reset_i210(self):
@@ -179,26 +183,46 @@ class TestControllerEnv(unittest.TestCase):
         # =================================================================== #
 
         self.assertListEqual(
-            env._warmup_paths,
-            []
+            sorted(env._warmup_paths),
+            ['0.xml', '1.xml', '2.xml', '3.xml', '4.xml'],
         )
 
         self.assertDictEqual(
             env._warmup_description,
-            {}
+            {'end_speed': [5.0, 5.0, 5.0, 5.0, 5.0],
+             'inflow': [1900.0, 1900.0, 1950.0, 1950.0, 2000.0],
+             'xml_num': [0.0, 1.0, 2.0, 3.0, 4.0]},
         )
 
         # =================================================================== #
         # test case 2                                                         #
         # =================================================================== #
 
-        self.assertEqual(env.net_params.inflow.get(), 2000)
-        self.assertEqual(env.k.network.get_max_speed(""), 2000)
+        self.assertEqual(
+            env.network.net_params.inflows.get(),
+            [{'name': 'human_inflow_0',
+              'vtype': 'human',
+              'edge': 'ghost0',
+              'departLane': 'best',
+              'departSpeed': 25.5,
+              'begin': 1,
+              'end': 86400,
+              'vehsPerHour': 9500.0},
+             {'name': 'av_inflow_1',
+              'vtype': 'av',
+              'edge': 'ghost0',
+              'departLane': 'best',
+              'departSpeed': 25.5,
+              'begin': 1,
+              'end': 86400,
+              'vehsPerHour': 500.0}]
+        )
+        self.assertEqual(env.k.network.get_max_speed("119257908#3", 0), 5.0)
 
         env.reset()
 
-        self.assertEqual(env.net_params.inflow.get(), 2000)
-        self.assertEqual(env.k.network.get_max_speed(""), 2000)
+        self.assertEqual(env.network.net_params.inflows.get(), 2000)
+        self.assertEqual(env.k.network.get_max_speed("119257908#3", 0), 2000)
 
     def test_get_gallons(self):
         """Validate the functionality of the get_gallons method."""

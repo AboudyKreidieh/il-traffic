@@ -184,15 +184,10 @@ def main(args):
         environment_params["v_des"] = env_params["v_des"]
 
     # Specify an emission path.
-    if network_type == "ring":
-        length, scale = network_params["length"], network_params["scale"]
-        emission_path = os.path.join(flags.model_path, "results/{}-{}".format(
-            int(scale), int(length)))
-    else:
-        inflow = network_params["inflow"]
-        end_speed = network_params["end_speed"]
-        emission_path = os.path.join(flags.model_path, "results/{}-{}".format(
-            int(inflow), int(end_speed)))
+    inflow = network_params["inflow"]
+    end_speed = network_params["end_speed"]
+    emission_path = os.path.join(flags.model_path, "results/{}-{}".format(
+        int(inflow), int(end_speed)))
     ensure_dir(emission_path)
 
     # Create the environment.
@@ -202,6 +197,7 @@ def main(args):
         environment_params=environment_params,
         render=flags.render,
         emission_path=emission_path if flags.gen_emission else None,
+        use_warmup=flags.use_warmup,
     )
 
     # Create the expert model.

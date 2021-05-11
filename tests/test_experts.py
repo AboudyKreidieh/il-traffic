@@ -124,7 +124,7 @@ class TestFollowerStopper(unittest.TestCase):
         self.assertAlmostEqual(
             model.get_action(speed=4, headway=10, lead_speed=5),
             1.0)
-        self.assertAlmostEqual(model.v_cmd, 5.0)
+        self.assertAlmostEqual(model.v_cmd, 5.016)
 
         # Test twice.
         self.assertAlmostEqual(

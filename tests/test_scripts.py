@@ -28,7 +28,7 @@ class TestSimulate(unittest.TestCase):
             'end_speed': 5.0,
             'gen_emission': False,
             'inflow': 2000,
-            'network_type': 'ring',
+            'network_type': 'i210',
             'noise': 0.0,
             'penetration_rate': 0.05,
             'render': False,
