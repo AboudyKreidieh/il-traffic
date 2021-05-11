@@ -1,11 +1,11 @@
 """Run the expert policies.
 
 This script tests the performance of the Intelligent Driver Model and variants
-of the FollowerStopper on the ring, highway, and I-210 networks, and collects
-expert trajectory data for later use.
+of the FollowerStopper on the highway and I-210 networks, and collects expert
+trajectory data for later use.
 
 Usage
-    python run_expert.py --network_type "ring" --controller_type 1
+    python simulate.py --network_type "i210" --controller_type 1
 """
 import pandas as pd
 import sys
@@ -54,9 +54,9 @@ def parse_args(args):
     parser.add_argument(
         '--network_type',
         type=str,
-        default='ring',
-        help='the type of network to simulate. Must be one of {"ring", '
-             '"highway", "i210"}.')
+        default='i210',
+        help='the type of network to simulate. Must be one of {"highway", '
+             '"i210"}.')
     parser.add_argument(
         '--inflow',
         type=float,
@@ -176,8 +176,7 @@ def plot_results(emission_path,
     emission_path : str
         the path to the emission.csv file
     network_type : str
-        the type of network to simulate. Must be one of {"ring", "highway",
-        "i210"}.
+        the type of network to simulate. Must be one of {"highway", "i210"}.
     mpg_vals : list of float
         list of MPG values collected during the rollout procedure
     mpg_times : list of float
@@ -197,14 +196,7 @@ def plot_results(emission_path,
     df = get_global_position(df, network_type=network_type)
 
     # Collect some relevant information.
-    if network_type == "ring":
-        max_speed = 8
-        domain_bounds = None
-        num_lanes = 1
-        observed_min = None
-        observed_max = None
-        start = 1800
-    elif network_type == "highway":
+    if network_type == "highway":
         max_speed = 20
         domain_bounds = [500, 2300]
         num_lanes = 1
@@ -243,7 +235,7 @@ def plot_results(emission_path,
     avg_speed_plot(
         df,
         min_speed=0,
-        max_speed=9 if network_type == "ring" else 30,
+        max_speed=30,
         title="",
         save_path=os.path.join(emission_path, "avg-speed.png"),
         observed_min=observed_min,

@@ -28,7 +28,7 @@ class TestSimulate(unittest.TestCase):
             'end_speed': 5.0,
             'gen_emission': False,
             'inflow': 2000,
-            'network_type': 'ring',
+            'network_type': 'i210',
             'noise': 0.0,
             'penetration_rate': 0.05,
             'render': False,
@@ -195,6 +195,7 @@ class TestImitate(unittest.TestCase):
             'num_rollouts': 10,
             'num_train_steps': 1000,
             'num_iterations': 200,
+            'initial_episodes': 20,
             'seed': 1000,
             'env_params': {
                 'obs_frames': 5,
@@ -235,7 +236,6 @@ class TestEvaluate(unittest.TestCase):
         """
         # test case 1
         args = parse_evaluate_args(["model_path"])
-        print(vars(args))
         expected_args = {
             'model_path': 'model_path',
             'ckpt_num': None,
