@@ -5,7 +5,7 @@ of the FollowerStopper on the highway and I-210 networks, and collects expert
 trajectory data for later use.
 
 Usage
-    python run_expert.py --network_type "i210" --controller_type 1
+    python simulate.py --network_type "i210" --controller_type 1
 """
 import pandas as pd
 import sys
