@@ -1,3 +1,4 @@
+"""Evaluate the performance of a trained model."""
 import tensorflow as tf
 import argparse
 import os

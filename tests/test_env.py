@@ -2,6 +2,8 @@
 import unittest
 import numpy as np
 import os
+import random
+import tensorflow as tf
 from copy import deepcopy
 
 import il_traffic.config as config
@@ -21,10 +23,12 @@ class TestControllerEnv(unittest.TestCase):
         self.highway_env_params = {
             "controller_cls": IntelligentDriverModel,
             "controller_params": {"a": 1.3, "b": 2.0, "noise": 0.2},
-            "control_range": None,
+            "control_range": [500, 2300],
             "max_accel": 1,
             "max_decel": 1,
             "obs_frames": 5,
+            "frame_skip": 5,
+            "avg_speed": False,
             "full_history": 5,
             "warmup_path": None,
             "rl_penetration": 0.05,
@@ -74,6 +78,11 @@ class TestControllerEnv(unittest.TestCase):
         3. get_controlled_ids
         4. observed_ids
         """
+        # Setup the seed value.
+        random.seed(1)
+        np.random.seed(1)
+        tf.compat.v1.set_random_seed(1)
+
         env_params = deepcopy(self.highway_env_params)
         env_params["warmup_path"] = os.path.join(
             config.PROJECT_PATH, "tests/test_files/warmup_highway")
@@ -91,16 +100,10 @@ class TestControllerEnv(unittest.TestCase):
         env.reset()
 
         # test case 1
-        np.test.assert_almost_equal(
-            env.get_state(),
-            [],
-        )
+        pass  # TODO
 
         # test case 2
-        np.test.assert_almost_equal(
-            env.compute_reward(),
-            [],
-        )
+        pass  # TODO
 
         # test case 3
         pass  # TODO
@@ -116,6 +119,11 @@ class TestControllerEnv(unittest.TestCase):
         1. that the warmup_description features are accurately filled.
         2. that the inflow and end_speed update appropriately
         """
+        # Setup the seed value.
+        random.seed(1)
+        np.random.seed(1)
+        tf.compat.v1.set_random_seed(1)
+
         env_params = deepcopy(self.highway_env_params)
         env_params["warmup_path"] = os.path.join(
             config.PROJECT_PATH, "tests/test_files/warmup_highway")
@@ -135,27 +143,63 @@ class TestControllerEnv(unittest.TestCase):
 
         self.assertListEqual(
             sorted(env._warmup_paths),
-            ['0.xml', '1.xml', '2.xml', '3.xml', '4.xml'],
+            ['0.xml', '1.xml', '2.xml', '3.xml'],
         )
 
         self.assertDictEqual(
             env._warmup_description,
-            {'end_speed': [5.0, 5.0, 5.0, 5.0, 5.0],
-             'inflow': [1900.0, 1900.0, 1950.0, 1950.0, 2000.0],
-             'xml_num': [0.0, 1.0, 2.0, 3.0, 4.0]},
+            {'end_speed': [5.0, 5.0, 5.0, 5.0],
+             'inflow': [1900.0, 1900.0, 1950.0, 1950.0],
+             'xml_num': [0.0, 1.0, 2.0, 3.0]},
         )
 
         # =================================================================== #
         # test case 2                                                         #
         # =================================================================== #
 
-        self.assertEqual(env.network.net_params.inflows.get(), 2000)
+        self.assertEqual(
+            env.network.net_params.inflows.get(),
+            [{'name': 'idm_inflow_0',
+              'vtype': 'human',
+              'edge': 'highway_0',
+              'departLane': 'free',
+              'departSpeed': 24.1,
+              'begin': 1,
+              'end': 86400,
+              'vehsPerHour': 1900},
+             {'name': 'av_inflow_1',
+              'vtype': 'av',
+              'edge': 'highway_0',
+              'departLane': 'free',
+              'departSpeed': 24.1,
+              'begin': 1,
+              'end': 86400,
+              'vehsPerHour': 100}]
+        )
         self.assertEqual(env.k.network.get_max_speed("highway_end", 0), 5.0)
 
         env.reset()
 
-        self.assertEqual(env.network.net_params.inflows.get(), 2000)
-        self.assertEqual(env.k.network.get_max_speed(""), 2000)
+        self.assertEqual(
+            env.network.net_params.inflows.get(),
+            [{'name': 'flow_0',
+              'vtype': 'human',
+              'edge': 'highway_0',
+              'departLane': 'free',
+              'departSpeed': 24.1,
+              'begin': 1,
+              'end': 86400,
+              'vehsPerHour': 1852.5},
+             {'name': 'flow_1',
+              'vtype': 'av',
+              'edge': 'highway_0',
+              'departLane': 'free',
+              'departSpeed': 24.1,
+              'begin': 1,
+              'end': 86400,
+              'vehsPerHour': 97.5}]
+        )
+        self.assertEqual(env.k.network.get_max_speed("highway_end", 0), 5.0)
 
     def test_reset_i210(self):
         """Validate the functionality of the I-210 reset method.
@@ -165,6 +209,11 @@ class TestControllerEnv(unittest.TestCase):
         1. that the warmup_description features are accurately filled.
         2. that the inflow and end_speed update appropriately
         """
+        # Setup the seed value.
+        random.seed(1)
+        np.random.seed(1)
+        tf.compat.v1.set_random_seed(1)
+
         env_params = deepcopy(self.highway_env_params)
         env_params["warmup_path"] = os.path.join(
             config.PROJECT_PATH, "tests/test_files/warmup_i210")
@@ -184,14 +233,14 @@ class TestControllerEnv(unittest.TestCase):
 
         self.assertListEqual(
             sorted(env._warmup_paths),
-            ['0.xml', '1.xml', '2.xml', '3.xml', '4.xml'],
+            ['0.xml', '1.xml', '2.xml', '3.xml'],
         )
 
         self.assertDictEqual(
             env._warmup_description,
-            {'end_speed': [5.0, 5.0, 5.0, 5.0, 5.0],
-             'inflow': [1900.0, 1900.0, 1950.0, 1950.0, 2000.0],
-             'xml_num': [0.0, 1.0, 2.0, 3.0, 4.0]},
+            {'end_speed': [5.0, 5.0, 5.0, 5.0],
+             'inflow': [1900.0, 1900.0, 1950.0, 1950.0],
+             'xml_num': [0.0, 1.0, 2.0, 3.0]},
         )
 
         # =================================================================== #
@@ -221,8 +270,26 @@ class TestControllerEnv(unittest.TestCase):
 
         env.reset()
 
-        self.assertEqual(env.network.net_params.inflows.get(), 2000)
-        self.assertEqual(env.k.network.get_max_speed("119257908#3", 0), 2000)
+        self.assertEqual(
+            env.network.net_params.inflows.get(),
+            [{'name': 'flow_0',
+              'vtype': 'human',
+              'edge': 'ghost0',
+              'departLane': 'best',
+              'departSpeed': 25.5,
+              'begin': 1,
+              'end': 86400,
+              'vehsPerHour': 9262.5},
+             {'name': 'flow_1',
+              'vtype': 'av',
+              'edge': 'ghost0',
+              'departLane': 'best',
+              'departSpeed': 25.5,
+              'begin': 1,
+              'end': 86400,
+              'vehsPerHour': 487.5}]
+        )
+        self.assertEqual(env.k.network.get_max_speed("119257908#3", 0), 5.0)
 
     def test_get_gallons(self):
         """Validate the functionality of the get_gallons method."""
