@@ -305,7 +305,9 @@ def get_flow_params(network_type,
                     render,
                     emission_path,
                     use_warmup=False,
-                    training=False):
+                    training=False,
+                    accel=1.3,
+                    lc_frequency=1):
     """Return the flow-specific parameters when running ControllerEnv.
 
     Parameters
@@ -421,21 +423,13 @@ def get_flow_params(network_type,
         raise ValueError("Unknown network type: {}".format(network_type))
 
     if use_warmup:
-        end_speed = network_params["end_speed"]
-        penetration_rate = network_params["penetration_rate"]
-
-        if end_speed not in [5, 6, 7, 8, 9, 10]:
-            raise ValueError(
-                "Only end speeds of [5, 6, 7, 8, 9, 10] are valid when trying "
-                "to simulate from a warmup state.")
-        elif inflow_rate not in [
-                1900, 1950, 2000, 2050, 2100, 2150, 2200, 2250, 2300]:
-            raise ValueError(
-                "Only inflow rates  of [1900, 1950, 2000, 2050, 2100, 2150, "
-                "2200, 2250, 2300] are valid when trying to simulate from a "
-                "warmup state.")
-
-        xml_num = 2 * (int((inflow_rate - 1900) / 50) + 9 * (end_speed - 5))
+        multiple = int(accel / 0.2) - 1
+        increment = 0
+        if lc_frequency == 2:
+            increment = 1
+        elif lc_frequency == 10:
+            increment = 10
+        xml_num = 3 * multiple + increment
         load_state = os.path.join(
             config.PROJECT_PATH,
             "warmup/{}/{}.xml".format(network_type, int(xml_num)))
@@ -453,7 +447,7 @@ def get_flow_params(network_type,
     vehicles.add(
         veh_id="human",
         acceleration_controller=(IDMController, {
-            "a": 1.3,
+            "a": accel,
             "b": 2.0,
             "noise": 0.3,
             "display_warnings": False,
@@ -466,6 +460,7 @@ def get_flow_params(network_type,
         ),
         lane_change_params=SumoLaneChangeParams(
             lane_change_mode="sumo_default",
+            lc_speed_gain=lc_frequency,
         ),
         routing_controller=(ContinuousRouter, {}),
         num_vehicles=0,
@@ -549,7 +544,9 @@ def create_env(network_type,
                emission_path=None,
                use_warmup=False,
                training=False,
-               warmup_steps=None):
+               warmup_steps=None,
+               accel=1.3,
+               lc_frequency=1):
     """Create and return a Flow environment based on the given parameters.
 
     Parameters
@@ -586,6 +583,8 @@ def create_env(network_type,
         emission_path=emission_path,
         use_warmup=use_warmup,
         training=training,
+        accel=accel,
+        lc_frequency=lc_frequency,
     )
 
     if warmup_steps is not None:

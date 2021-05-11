@@ -53,6 +53,16 @@ def parse_args(args):
         default=HIGHWAY_PARAMS["end_speed"],
         help='the maximum speed at the downstream boundary edge')
     parser.add_argument(
+        '--accel',
+        type=float,
+        default=1.3,
+        help='TODO')
+    parser.add_argument(
+        '--lc_frequency',
+        type=float,
+        default=1,
+        help='TODO')
+    parser.add_argument(
         '--penetration_rate',
         type=float,
         default=HIGHWAY_PARAMS["penetration_rate"],
@@ -184,10 +194,8 @@ def main(args):
         environment_params["v_des"] = env_params["v_des"]
 
     # Specify an emission path.
-    inflow = network_params["inflow"]
-    end_speed = network_params["end_speed"]
     emission_path = os.path.join(flags.model_path, "results/{}-{}".format(
-        int(inflow), int(end_speed)))
+        round(flags.accel, 1), int(flags.lc_frequency)))
     ensure_dir(emission_path)
 
     # Create the environment.
@@ -198,6 +206,8 @@ def main(args):
         render=flags.render,
         emission_path=emission_path if flags.gen_emission else None,
         use_warmup=flags.use_warmup,
+        accel=flags.accel,
+        lc_frequency=flags.lc_frequency,
     )
 
     # Create the expert model.
