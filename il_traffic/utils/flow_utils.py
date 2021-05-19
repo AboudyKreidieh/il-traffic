@@ -428,7 +428,7 @@ def get_flow_params(network_type,
         if lc_frequency == 2:
             increment = 1
         elif lc_frequency == 10:
-            increment = 10
+            increment = 2
         xml_num = 3 * multiple + increment
         load_state = os.path.join(
             config.PROJECT_PATH,
