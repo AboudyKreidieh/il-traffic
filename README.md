@@ -27,9 +27,10 @@ links:
 
 ### 1.1 Basic Installation
 
-This repository is an extension of the [Flow](TODO) repository. If you have not 
-previously installed Flow, begin by following the setup instruction provided 
-[here](TODO).
+This repository is an extension of the [Flow](https://flow-project.github.io/)
+repository. If you have not previously installed Flow, begin by following the 
+setup instruction provided 
+[here](https://flow.readthedocs.io/en/latest/flow_setup.html).
 
 Once Flow has been installed, open a terminal and set the working directory of
 the terminal to match the path to this repository:
@@ -102,8 +103,8 @@ the individual links below:
 
 | Network   | Links          |
 |-----------|----------------|
-| highway   | [click here](TODO) |
-| i210      | [click here](TODO) |
+| highway   | [click here](https://berkeley.box.com/shared/static/t7pbo49rxplor1fv1jczgv9cczu4bwg2.gz) |
+| i210      | [click here](https://berkeley.box.com/shared/static/99o6sboo6p19che1q0gpbbzgk93avvw7.gz) |
 
 ## 2. Usage
 
@@ -115,7 +116,32 @@ subsection.
 
 ### 2.1 Simulating Baseline and Expert Models
 
-TODO
+Through this repository, simulations of both baseline (human-driven) behaviors 
+and mixed-autonomy behaviors in which AVs follow a variety of different 
+controllers can be conducted through the `simulate.py` script. The networks 
+explored in this repository, see the figure below, include a single lane 
+highway and simulated version of the I-210 network. A description of the 
+process through which congestion forms in these model is available in our 
+[paper](TODO).
+
+<p align="center"><img src="docs/img/networks.png" align="middle" width="100%"/></p>
+
+To execute a simulation of the network, run:
+
+```shell
+python il_traffic/scripts/simulate.py
+```
+
+where the additional arguments are:
+
+* TODO
+
+The above script will start a simulation of the network that can be visualized 
+if `--render` is set. Moreover, if `--gen_emission` is set, this script will 
+create a folder with a path "expert_data/{controller}/{inflow}-{end_speed}" 
+containing the following files:
+
+* TODO
 
 ### 2.2 Imitating Experts
 
