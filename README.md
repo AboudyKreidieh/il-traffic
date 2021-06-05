@@ -7,7 +7,7 @@ links:
 - **Paper:** TODO
 - **Website:** https://sites.google.com/view/il-traffic/home
 
-<p align="center"><img src="docs/img/uncontrolled.gif" width="45%"/> &emsp;&emsp; <img src="docs/img/controlled.gif" width="45%"/></p>
+<p align="center"><img src="docs/img/uncontrolled.gif" width="48%"/> &emsp; <img src="docs/img/controlled.gif" width="48%"/></p>
 <p align="center">Imitation results on the I-210 network. <b>Left:</b> baseline/uncontrolled with stop-and-go waves. <b>Right:</b> imitated / controlled policy allowing to dissipation of waves </p>
 
 ## Contents
