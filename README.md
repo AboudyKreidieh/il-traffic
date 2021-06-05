@@ -19,10 +19,8 @@ links:
     2.1. [Simulating Baseline and Expert Models](#21-simulating-baseline-and-expert-models)  
     2.2. [Imitating Experts](#22-imitating-experts)  
     2.3. [Evaluating Results](#23-evaluating-results)  
-3. [Visualizing Existing Data](#3-visualizing-existing-data)  
-    3.1. [Downloading Models and Results](#31-downloading-models-and-results)  
-    3.2. [Visualizing Behaviors and Trajectories](#32-visualizing-behaviors-and-trajectories)  
-4. [Citing](#4-citing)
+    2.4. [Downloading Models and Results](#24-downloading-models-and-results)  
+3. [Citing](#3-citing)
 
 ## 1. Setup Instructions
 
@@ -103,12 +101,16 @@ the individual links below:
 
 | Network   | Links          |
 |-----------|----------------|
-| highway   | [click here]() |
-| i210      | [click here]() |
+| highway   | [click here](TODO) |
+| i210      | [click here](TODO) |
 
 ## 2. Usage
 
-TODO
+We describe in the following subsections how different hand-designed baseline 
+and AV (expert) models can be simulated within different networks, and describe
+the imitation and evaluation procedures. Results from previous runs using this
+repository can further be downloaded and visualized through the final 
+subsection.
 
 ### 2.1 Simulating Baseline and Expert Models
 
@@ -116,17 +118,47 @@ TODO
 
 ### 2.2 Imitating Experts
 
-TODO
+The behaviors of the baseline and expert controllers presented in the 
+subsection above can be imitated to a neural network policy (or an ensemble of
+policies) through the `imitate.py` method in the "scripts" folder. This 
+method implements the DAgger algorithm, and provides additional augmentations 
+to allow for the training of ensembles of (optionally stochastic) policies, as 
+well as various other features such as dropout and batch normalization. To 
+start the imitation procedure, run:
+
+```shell script
+python il_traffic/scripts/imitate.py
+```
+
+where the additional arguments are:
+
+* TODO
+
+Once the imitation procedure has begun, it will create an "imitation_data" 
+folder which will store the trained model after every training iteration. The 
+folder will also contain a tensorboard log and "train.csv" file that describe 
+the performance of the model at every iteration.
 
 ### 2.3 Evaluating Results
 
-TODO
+Once a given expert has been imitated, the performance of the model can be 
+verified through the `evaluate.py` method by running:
 
-## 3. Visualizing Existing Data  
+```shell script
+python il_traffic/scripts/evaluate.py "/path/to/results_folder"
+```
 
-TODO
+where the first argument is the path to the folder created by the imitation 
+method before, and the additional arguments are:
 
-### 3.1 Downloading Models and Results
+* TODO
+
+If the `--gen_emission` flag has been set, the script will create a new 
+"results" folder in the original folder with the model containing trajectory 
+data similar to the one created by the
+[simulation procedure](#21-simulating-baseline-and-expert-models).
+
+### 2.4 Downloading Models and Results
 
 The trained models and trajectories provided within the paper and website are 
 available to be downloaded and further analyzed. To download the existing 
@@ -153,44 +185,38 @@ separate links, you can do so from the below tables:
 
 | Controller          | Model (5 seeds) |
 |---------------------|-----------------|
-| Imitated (1 frame)  | [1]() - [2]() - [3]() - [4]() - [5]() |
-| Imitated (5 frames) | [1]() - [2]() - [3]() - [4]() - [5]() |
-
------------------
+| Imitated (1 frame)  | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Imitated (5 frames) | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
 
 * **Trajectories for different penetration rates:**
 
 | Controller          | Penetration Rate | Trajectories (5 seeds) |
 |---------------------|------------------|------------------------|
-| Baseline            | 0 %              | [1]() - [2]() - [3]() - [4]() - [5]() |
-| Follower Stopper    | 2.5 %            | [1]() - [2]() - [3]() - [4]() - [5]() |
-|                     | 5.0 %            | [1]() - [2]() - [3]() - [4]() - [5]() |
-|                     | 7.5 %            | [1]() - [2]() - [3]() - [4]() - [5]() |
-|                     | 10.0 %           | [1]() - [2]() - [3]() - [4]() - [5]() |
-| Imitated (1 frame)  | 2.5 %            | [1]() - [2]() - [3]() - [4]() - [5]() |
-|                     | 5.0 %            | [1]() - [2]() - [3]() - [4]() - [5]() |
-|                     | 7.5 %            | [1]() - [2]() - [3]() - [4]() - [5]() |
-|                     | 10.0 %           | [1]() - [2]() - [3]() - [4]() - [5]() |
-| Imitated (5 frames) | 2.5 %            | [1]() - [2]() - [3]() - [4]() - [5]() |
-|                     | 5.0 %            | [1]() - [2]() - [3]() - [4]() - [5]() |
-|                     | 7.5 %            | [1]() - [2]() - [3]() - [4]() - [5]() |
-|                     | 10.0 %           | [1]() - [2]() - [3]() - [4]() - [5]() |
-
------------------
+| Baseline            | 0 %              | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Follower Stopper    | 2.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+|                     | 5.0 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+|                     | 7.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+|                     | 10.0 %           | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Imitated (1 frame)  | 2.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+|                     | 5.0 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+|                     | 7.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+|                     | 10.0 %           | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Imitated (5 frames) | 2.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+|                     | 5.0 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+|                     | 7.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+|                     | 10.0 %           | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
 
 * **Trajectories from robustness tests:**
 
 | Controller          | Trajectories (5 seeds) |
 |---------------------|------------------------|
-| Baseline            | [1]() - [2]() - [3]() - [4]() - [5]() |
-| Follower Stopper    | [1]() - [2]() - [3]() - [4]() - [5]() |
-| Imitated (1 frame)  | [1]() - [2]() - [3]() - [4]() - [5]() |
-| Imitated (5 frames) | [1]() - [2]() - [3]() - [4]() - [5]() |
+| Baseline            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Follower Stopper    | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Imitated (1 frame)  | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Imitated (5 frames) | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
 
-### 3.2 Visualizing Behaviors and Trajectories
+## 3. Citing
 
-TODO
-
-## 4. Citing
+To cite this repository in publications, use the following:
 
 TODO
