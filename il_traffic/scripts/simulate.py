@@ -112,7 +112,7 @@ def parse_args(args):
              'and coupled together later to generate a video of the '
              'simulation.')
 
-    return parser.parse_known_args(args)[0]
+    return parser.parse_args(args)
 
 
 def rollout(env, model, save_path):

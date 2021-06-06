@@ -1,6 +1,9 @@
 """Tests for the features in scripts/."""
 import unittest
+import os
+import shutil
 
+import il_traffic.config as config
 from il_traffic.scripts.simulate import parse_args as parse_simulate_args
 from il_traffic.scripts.simulate import main as simulate
 from il_traffic.scripts.imitate import parse_args as parse_imitate_args
@@ -75,14 +78,33 @@ class TestSimulate(unittest.TestCase):
         1. that the emission file is properly generated
         2. that the proper images are created
         """
+        # shrinks the horizon to speedup tests
+        os.environ["TEST_FLAG"] = "True"
+
         # Run the main method.
-        pass  # TODO
+        simulate(["--network_type", "highway",
+                  "--gen_emission",
+                  "--use_warmup"])
 
         # test case 1
-        pass  # TODO
+        self.assertTrue(os.path.exists(
+            "expert_data/highway/FollowerStopper/2000-5/emission.csv"))
 
         # test case 2
-        pass  # TODO
+        self.assertTrue(os.path.exists(
+            "expert_data/highway/FollowerStopper/2000-5/mpg.csv"))
+        self.assertTrue(os.path.exists(
+            "expert_data/highway/FollowerStopper/2000-5/mpg.png"))
+        self.assertTrue(os.path.exists(
+            "expert_data/highway/FollowerStopper/2000-5/ts-0.png"))
+        self.assertTrue(os.path.exists(
+            "expert_data/highway/FollowerStopper/2000-5/avg-speed.png"))
+        self.assertTrue(os.path.exists(
+            "expert_data/highway/FollowerStopper/2000-5/tt.json"))
+
+        # Delete all files.
+        if len(os.listdir("expert_data/highway/FollowerStopper")) == 1:
+            shutil.rmtree("expert_data")
 
 
 class TestImitate(unittest.TestCase):
@@ -216,11 +238,34 @@ class TestImitate(unittest.TestCase):
         self.assertDictEqual(hp, expected_hp)
 
     def test_main(self):
-        """Validate the functionality of the main method.
+        """Validate the functionality of the main method."""
+        # shrinks the horizon to speedup tests
+        os.environ["TEST_FLAG"] = "True"
 
-        TODO.
-        """
-        pass  # TODO
+        # Run the main method.
+        imitate(["--env_name", "highway",
+                 "--initial_episodes", "1",
+                 "--num_iterations", "1",
+                 "--num_rollouts", "1"])
+
+        # Get the date/time.
+        date_time = sorted(os.listdir("imitation_data/highway/expert=1"))[-1]
+
+        # Check for the files.
+        self.assertTrue(os.path.exists(
+            "imitation_data/highway/expert=1/{}/hyperparameters.json".format(
+                date_time)))
+        self.assertTrue(os.path.exists(
+            "imitation_data/highway/expert=1/{}/checkpoints".format(
+                date_time)))
+        self.assertTrue(os.path.exists(
+            "imitation_data/highway/expert=1/{}/train.csv".format(date_time)))
+        self.assertTrue(os.path.exists(
+            "imitation_data/highway/expert=1/{}/tb_log".format(date_time)))
+
+        # Delete all files.
+        # if len(os.listdir("imitation_data/highway/expert=1")) == 1:
+        #     shutil.rmtree("imitation_data")
 
 
 class TestEvaluate(unittest.TestCase):
@@ -275,11 +320,32 @@ class TestEvaluate(unittest.TestCase):
         self.assertDictEqual(vars(args), expected_args)
 
     def test_main(self):
-        """Validate the functionality of the main method.
+        """Validate the functionality of the main method."""
+        # shrinks the horizon to speedup tests
+        os.environ["TEST_FLAG"] = "True"
 
-        TODO.
-        """
-        pass  # TODO
+        model_path = os.path.join(
+            config.PROJECT_PATH, "tests/test_files/model_highway")
+
+        # Run the main method.
+        evaluate([model_path, "--gen_emission", "--use_warmup"])
+
+        # Check that the files were created.
+        self.assertTrue(os.path.exists(os.path.join(
+            model_path, "results/2000-5/emission.csv")))
+        self.assertTrue(os.path.exists(os.path.join(
+            model_path, "results/2000-5/mpg.csv")))
+        self.assertTrue(os.path.exists(os.path.join(
+            model_path, "results/2000-5/mpg.png")))
+        self.assertTrue(os.path.exists(os.path.join(
+            model_path, "results/2000-5/ts-0.png")))
+        self.assertTrue(os.path.exists(os.path.join(
+            model_path, "results/2000-5/avg-speed.png")))
+        self.assertTrue(os.path.exists(os.path.join(
+            model_path, "results/2000-5/tt.json")))
+
+        # Delete all files.
+        shutil.rmtree(os.path.join(model_path, "results"))
 
 
 if __name__ == '__main__':

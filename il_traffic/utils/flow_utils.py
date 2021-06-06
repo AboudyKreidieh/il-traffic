@@ -21,11 +21,11 @@ from flow.energy_models.poly_fit_autonomie import PFMMidsizeSedan
 from flow.energy_models.poly_fit_autonomie import PFM2019RAV4
 
 import il_traffic.config as config
-from il_traffic import ControllerEnv
-from il_traffic import IntelligentDriverModel
-from il_traffic import FollowerStopper
-from il_traffic import PISaturation
-from il_traffic import TimeHeadwayFollowerStopper
+from il_traffic.core.env import ControllerEnv
+from il_traffic.core.experts import IntelligentDriverModel
+from il_traffic.core.experts import FollowerStopper
+from il_traffic.core.experts import PISaturation
+from il_traffic.core.experts import TimeHeadwayFollowerStopper
 
 
 def get_emission_path(controller_type, network_type, network_params):
@@ -339,6 +339,9 @@ def get_flow_params(network_type,
     dict
         flow-specific parameters
     """
+    # for testing purposes
+    horizon = 50 if os.environ.get("TEST_FLAG", "False") != "False" else None
+
     # Initialize an empty inflows object.
     inflows = InFlows()
 
@@ -515,7 +518,7 @@ def get_flow_params(network_type,
         # environment related parameters (see flow.core.params.EnvParams)
         env=EnvParams(
             warmup_steps=0 if (training or load_state is not None) else 9000,
-            horizon=1500 if training else 3000,
+            horizon=horizon or (1500 if training else 3000),
             additional_params=environment_params,
         ),
 

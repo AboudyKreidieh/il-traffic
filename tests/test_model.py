@@ -2,7 +2,7 @@
 import unittest
 import tensorflow as tf
 
-from il_traffic import FeedForwardModel
+from il_traffic.core.model import FeedForwardModel
 from il_traffic.utils.tf_util import get_trainable_vars
 
 

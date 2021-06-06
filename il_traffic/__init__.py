@@ -1,21 +1,5 @@
-"""TODO."""
-from il_traffic.core.alg import DAgger
-from il_traffic.core.env import ControllerEnv
-from il_traffic.core.experts import IntelligentDriverModel
-from il_traffic.core.experts import FollowerStopper
-from il_traffic.core.experts import PISaturation
-from il_traffic.core.experts import TimeHeadwayFollowerStopper
-from il_traffic.core.model import FeedForwardModel
+"""Returns features of this repository (e.g. version number)."""
+from .version import __version__ as v
 
-__version__ = "0.0.1"
-
-__all__ = [
-    "DAgger",
-    "ControllerEnv",
-    "IntelligentDriverModel",
-    "FollowerStopper",
-    "PISaturation",
-    "TimeHeadwayFollowerStopper",
-    "FeedForwardModel",
-    "__version__",
-]
+# repo version number
+__version__ = v

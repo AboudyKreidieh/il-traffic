@@ -6,12 +6,13 @@ import pandas as pd
 import csv
 import random
 import tensorflow as tf
+import numpy as np
 
 import il_traffic.config as config
-from il_traffic import IntelligentDriverModel
-from il_traffic import FollowerStopper
-from il_traffic import PISaturation
-from il_traffic import TimeHeadwayFollowerStopper
+from il_traffic.core.experts import IntelligentDriverModel
+from il_traffic.core.experts import FollowerStopper
+from il_traffic.core.experts import PISaturation
+from il_traffic.core.experts import TimeHeadwayFollowerStopper
 from il_traffic.utils.flow_utils import get_emission_path
 from il_traffic.utils.flow_utils import get_network_params
 from il_traffic.utils.flow_utils import get_base_env_params
@@ -20,6 +21,8 @@ from il_traffic.utils.tf_util import make_session
 from il_traffic.utils.tf_util import layer
 from il_traffic.utils.tf_util import get_trainable_vars
 from il_traffic.utils.visualize import process_emission
+from il_traffic.utils.sampler import Sampler
+from il_traffic.utils.misc import dict_update
 
 
 class TestFlowUtils(unittest.TestCase):
@@ -437,7 +440,6 @@ class TestFlowUtils(unittest.TestCase):
         This is done for the following cases:
 
         1. TODO
-        2. TODO
         """
         pass  # TODO
 
@@ -447,7 +449,13 @@ class TestMisc(unittest.TestCase):
 
     def test_dict_update(self):
         """Validate the functionality of the dict_update method."""
-        pass  # TODO
+        dict1 = {"hello": {"world": {"1": "foo"}}}
+        dict2 = {"hello": {"world": {"2": "bar"}}}
+
+        self.assertDictEqual(
+            dict_update(dict1, dict2),
+            {"hello": {"world": {"1": "foo", "2": "bar"}}}
+        )
 
 
 class TestSampler(unittest.TestCase):
@@ -466,64 +474,236 @@ class TestSampler(unittest.TestCase):
         # =================================================================== #
 
         # Create the sampler.
-        pass  # TODO
-
-        # Check the attributes.
-        pass  # TODO
+        sampler = Sampler(
+            env_name="highway",
+            render=False,
+            expert=0,
+            env_params={},
+            env_num=0
+        )
 
         # Check the wrapped environment.
-        pass  # TODO
+        self.assertEqual(
+            sampler.env.k.network.network.__class__.__name__, "HighwayNetwork")
 
         # Delete the sampler.
-        pass  # TODO
+        del sampler
 
         # =================================================================== #
         #                             test case 2                             #
         # =================================================================== #
 
         # Create the sampler.
-        pass  # TODO
-
-        # Check the attributes.
-        pass  # TODO
+        sampler = Sampler(
+            env_name="i210",
+            render=False,
+            expert=0,
+            env_params={},
+            env_num=0
+        )
 
         # Check the wrapped environment.
-        pass  # TODO
+        self.assertEqual(
+            sampler.env.k.network.network.__class__.__name__, "I210SubNetwork")
 
         # Delete the sampler.
-        pass  # TODO
+        del sampler
 
     def test_get_init_obs(self):
         """Validate the functionality of the get_init_obs method."""
+        # Set random seeds.
+        random.seed(0)
+        np.random.seed(0)
+
         # Create the sampler.
-        pass  # TODO
+        # sampler = Sampler(
+        #     env_name="i210",
+        #     render=False,
+        #     expert=0,
+        #     env_params={},
+        #     env_num=0
+        # )
 
         # Check the method.
-        pass  # TODO
+        # np.testing.assert_almost_equal(
+        #     sampler.get_init_obs(),
+        #     [[0.67440379, 0.68813417, 0.08272568, 0., 0., 0., 0.],
+        #      [0.65403765, 0.6405847, 0.07847633, 0., 0., 0., 0.],
+        #      [0.55033265, 0.57241793, 0.06852884, 0., 0., 0., 0.],
+        #      [0.67242395, 0.66881029, 0.08011711, 0., 0., 0., 0.],
+        #      [0.57355391, 0.58505743, 0.07091328, 0., 0., 0., 0.],
+        #      [0.56028122, 0.55277353, 0.06863959, 0., 0., 0., 0.],
+        #      [0.75747709, 0.79940943, 0.10132385, 0., 0., 0., 0.],
+        #      [0.70922407, 0.74866493, 0.08715971, 0., 0., 0., 0.],
+        #      [0.68881468, 0.7342854, 0.08938506, 0., 0., 0., 0.],
+        #      [0.61602017, 0.55379662, 0.07281891, 0., 0., 0., 0.],
+        #      [0.68930143, 0.63452829, 0.08423376, 0., 0., 0., 0.],
+        #      [0.85034153, 0.80554593, 0.10424209, 0., 0., 0., 0.],
+        #      [0.64709095, 0.59404376, 0.07486632, 0., 0., 0., 0.],
+        #      [0.38948302, 0.43693076, 0.05184375, 0., 0., 0., 0.],
+        #      [0.73156583, 0.81538934, 0.09701339, 0., 0., 0., 0.],
+        #      [0.50219334, 0.54863601, 0.06918145, 0., 0., 0., 0.],
+        #      [0.91591401, 1.04214463, 0.12260129, 0., 0., 0., 0.],
+        #      [1.15461085, 0.92016595, 0.13154719, 0., 0., 0., 0.],
+        #      [1.26521341, 1.3560602, 0.17844568, 0., 0., 0., 0.],
+        #      [0.63744201, 0.63698249, 0.0817833, 0., 0., 0., 0.],
+        #      [1.3107227, 1.39129068, 0.17418886, 0., 0., 0., 0.],
+        #      [0.47987644, 0.32730042, 0.05462062, 0., 0., 0., 0.],
+        #      [0.92549496, 1.02071994, 0.13251117, 0., 0., 0., 0.],
+        #      [1.16896087, 1.31378323, 0.1898991, 0., 0., 0., 0.],
+        #      [0.39458973, 0.2274378, 0.04537751, 0., 0., 0., 0.],
+        #      [0.17717182, 0.21254028, 0.02958683, 0., 0., 0., 0.],
+        #      [0.95581996, 1.09970734, 0.15581181, 0., 0., 0., 0.],
+        #      [1.64386596, 1.72950468, 0.2483051, 0., 0., 0., 0.],
+        #      [0.1307436, 0.12424366, 0.01902529, 0., 0., 0., 0.],
+        #      [0.18737099, 0.12292322, 0.02432612, 0., 0., 0., 0.]]
+        # )
 
     def test_observation_space(self):
-        """Validate the functionality of the observation_space method."""
-        # Create the sampler.
-        pass  # TODO
+        """Validate the functionality of the observation_space method.
 
-        # Check the method.
-        pass  # TODO
+        This is done for the following cases:
+
+        1. obs_frames=1, full_history=False, avg_speed=False,
+        1. obs_frames=5, full_history=False, avg_speed=False,
+        1. obs_frames=5, full_history=True,  avg_speed=False,
+        1. obs_frames=1, full_history=False, avg_speed=True,
+        1. obs_frames=5, full_history=False, avg_speed=True,
+        1. obs_frames=5, full_history=True,  avg_speed=True,
+        """
+        # =================================================================== #
+        #                             test case 1                             #
+        # =================================================================== #
+
+        sampler = Sampler(
+            env_name="i210",
+            render=False,
+            expert=0,
+            env_params={
+                "obs_frames": 1, "full_history": False, "avg_speed": False},
+            env_num=0
+        )
+
+        self.assertEqual(sampler.observation_space().shape[0], 3)
+
+        del sampler
+
+        # =================================================================== #
+        #                             test case 2                             #
+        # =================================================================== #
+
+        sampler = Sampler(
+            env_name="i210",
+            render=False,
+            expert=0,
+            env_params={
+                "obs_frames": 5, "full_history": False, "avg_speed": False},
+            env_num=0
+        )
+
+        self.assertEqual(sampler.observation_space().shape[0], 7)
+
+        del sampler
+
+        # =================================================================== #
+        #                             test case 3                             #
+        # =================================================================== #
+
+        sampler = Sampler(
+            env_name="i210",
+            render=False,
+            expert=0,
+            env_params={
+                "obs_frames": 5, "full_history": True, "avg_speed": False},
+            env_num=0
+        )
+
+        self.assertEqual(sampler.observation_space().shape[0], 15)
+
+        del sampler
+
+        # =================================================================== #
+        #                             test case 4                             #
+        # =================================================================== #
+
+        sampler = Sampler(
+            env_name="i210",
+            render=False,
+            expert=0,
+            env_params={
+                "obs_frames": 1, "full_history": False, "avg_speed": True},
+            env_num=0
+        )
+
+        self.assertEqual(sampler.observation_space().shape[0], 4)
+
+        del sampler
+
+        # =================================================================== #
+        #                             test case 5                             #
+        # =================================================================== #
+
+        sampler = Sampler(
+            env_name="i210",
+            render=False,
+            expert=0,
+            env_params={
+                "obs_frames": 5, "full_history": False, "avg_speed": True},
+            env_num=0
+        )
+
+        self.assertEqual(sampler.observation_space().shape[0], 8)
+
+        del sampler
+
+        # =================================================================== #
+        #                             test case 6                             #
+        # =================================================================== #
+
+        sampler = Sampler(
+            env_name="i210",
+            render=False,
+            expert=0,
+            env_params={
+                "obs_frames": 5, "full_history": True, "avg_speed": True},
+            env_num=0
+        )
+
+        self.assertEqual(sampler.observation_space().shape[0], 16)
+
+        del sampler
 
     def test_action_space(self):
         """Validate the functionality of the action_space method."""
         # Create the sampler.
-        pass  # TODO
+        sampler = Sampler(
+            env_name="i210",
+            render=False,
+            expert=0,
+            env_params={},
+            env_num=0
+        )
 
         # Check the method.
-        pass  # TODO
+        self.assertEqual(sampler.action_space().high, [1])
+        self.assertEqual(sampler.action_space().low, [-1])
 
     def test_horizon(self):
         """Validate the functionality of the horizon method."""
+        # Maintain the correct horizon for test.
+        os.environ["TEST_FLAG"] = "False"
+
         # Create the sampler.
-        pass  # TODO
+        sampler = Sampler(
+            env_name="i210",
+            render=False,
+            expert=0,
+            env_params={},
+            env_num=0
+        )
 
         # Check the method.
-        pass  # TODO
+        self.assertEqual(sampler.horizon(), 1500)
 
 
 class TestTfUtil(unittest.TestCase):
@@ -742,40 +922,6 @@ class TestVisualize(unittest.TestCase):
 
         # Delete the created file.
         shutil.rmtree(directory)
-
-    def test_get_global_position(self):
-        """Validate the functionality of the get_global_position method.
-
-        This is done for the following cases:
-
-        1. highway
-        2. i210
-        """
-        # =================================================================== #
-        #                             test case 1                             #
-        # =================================================================== #
-
-        # Create a dataframe for the highway network.
-        pass  # TODO
-
-        # Create the global_position column.
-        pass  # TODO
-
-        # Check the output from the global_position column.
-        pass  # TODO
-
-        # =================================================================== #
-        #                             test case 2                             #
-        # =================================================================== #
-
-        # Create a dataframe for the highway network.
-        pass  # TODO
-
-        # Create the global_position column.
-        pass  # TODO
-
-        # Check the output from the global_position column.
-        pass  # TODO
 
 
 if __name__ == '__main__':

@@ -8,7 +8,7 @@ from setuptools import setup
 from setuptools import Distribution
 import setuptools.command.build_ext as _build_ext
 import subprocess
-from il_traffic import __version__
+from il_traffic.version import __version__
 
 
 def _read_requirements_file():
@@ -23,6 +23,7 @@ class BuildExt(_build_ext.build_ext):
     def run(self):
         """Install traci wheels."""
         subprocess.check_call(['pip', 'install', 'ray[tune]'])
+        subprocess.check_call(['il_traffic/scripts/load_warmup.sh'])
 
 
 class BinaryDistribution(Distribution):

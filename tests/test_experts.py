@@ -1,10 +1,10 @@
 """Tests for the features in core/alg.py."""
 import unittest
 
-from il_traffic import IntelligentDriverModel
-from il_traffic import FollowerStopper
-from il_traffic import PISaturation
-from il_traffic import TimeHeadwayFollowerStopper
+from il_traffic.core.experts import IntelligentDriverModel
+from il_traffic.core.experts import FollowerStopper
+from il_traffic.core.experts import PISaturation
+from il_traffic.core.experts import TimeHeadwayFollowerStopper
 from il_traffic.core.experts import VelocityController
 
 

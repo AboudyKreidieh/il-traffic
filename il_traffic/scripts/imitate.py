@@ -7,8 +7,8 @@ from time import strftime
 
 from flow.core.util import ensure_dir
 
-from il_traffic import DAgger
-from il_traffic import FeedForwardModel
+from il_traffic.core.alg import DAgger
+from il_traffic.core.model import FeedForwardModel
 from il_traffic.core.alg import FEEDFORWARD_PARAMS
 from il_traffic.core.env import ADDITIONAL_ENV_PARAMS
 
