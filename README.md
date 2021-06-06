@@ -132,16 +132,25 @@ To execute a simulation of the network, run:
 python il_traffic/scripts/simulate.py
 ```
 
-where the additional arguments are:
+where the descriptions to additional arguments can be seen by running:
 
-* TODO
+```shell script
+python il_traffic/scripts/simulate.py --help
+```
+
+> **Note:**  If you are using the `--use_warmup` flag, be sure to download the 
+> warmup files first, see [this section](#13-downloading-warmup-states).
 
 The above script will start a simulation of the network that can be visualized 
 if `--render` is set. Moreover, if `--gen_emission` is set, this script will 
-create a folder with a path "expert_data/{controller}/{inflow}-{end_speed}" 
+create a folder in "expert_data/{network}/{controller}/{inflow}-{end_speed}" 
 containing the following files:
 
-* TODO
+* avg-speed.png : TODO
+* emission.csv : TODO
+* mpg.csv : TODO
+* ts-{0-4}.png : TODO
+* tt.json : TODO
 
 ### 2.2 Imitating Experts
 
@@ -157,9 +166,11 @@ start the imitation procedure, run:
 python il_traffic/scripts/imitate.py
 ```
 
-where the additional arguments are:
+where the descriptions to additional arguments can be seen by running:
 
-* TODO
+```shell script
+python il_traffic/scripts/imitate.py --help
+```
 
 Once the imitation procedure has begun, it will create an "imitation_data" 
 folder which will store the trained model after every training iteration. The 
@@ -176,9 +187,14 @@ python il_traffic/scripts/evaluate.py "/path/to/results_folder"
 ```
 
 where the first argument is the path to the folder created by the imitation 
-method before, and the additional arguments are:
+method before, and the additional arguments can be seen by running:
 
-* TODO
+```shell script
+python il_traffic/scripts/evaluate.py --help
+```
+
+> **Note:**  If you are using the `--use_warmup` flag, be sure to download the 
+> warmup files first, see [this section](#13-downloading-warmup-states).
 
 If the `--gen_emission` flag has been set, the script will create a new 
 "results" folder in the original folder with the model containing trajectory 
@@ -195,7 +211,7 @@ models and trajectories, run:
 il_traffic/scripts/load_data.sh
 ```
 
-where the descriptions to additional parameters can be read by running:
+where the descriptions to additional arguments can be seen by running:
 
 ```shell script
 il_traffic/scripts/load_data.sh --help
