@@ -237,8 +237,8 @@ separate links, you can do so from the below tables:
 
 | Controller          | Model (5 seeds) |
 |---------------------|-----------------|
-| Imitated (1 frame)  | [1](https://berkeley.box.com/shared/static/ueyl2857e199rqee3k9mr7zsfg1lztky.gz) - [2](https://berkeley.box.com/shared/static/8t24lxu8igpmk1jv8nakojy7hrg72y12.gz) - [3](https://berkeley.box.com/shared/static/su1s2unsotcs0xy08c2x1xug3sjdesuw.gz) - [4](TODO) - [5](TODO) |
-| Imitated (5 frames) | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Imitated (1 frame)  | [1](https://berkeley.box.com/shared/static/ueyl2857e199rqee3k9mr7zsfg1lztky.gz) - [2](https://berkeley.box.com/shared/static/8t24lxu8igpmk1jv8nakojy7hrg72y12.gz) - [3](https://berkeley.box.com/shared/static/su1s2unsotcs0xy08c2x1xug3sjdesuw.gz) - [4](https://berkeley.box.com/shared/static/5w9l2hijyo31mu9n7x7dmkv472ymk4h7.gz) - [5](https://berkeley.box.com/shared/static/zsyphcsthp1i5ewpjx7ropdvws0ta97m.gz) |
+| Imitated (5 frames) | [1](https://berkeley.box.com/shared/static/u7k9jud63615hsn1j4ybrrqnmfi8mmu9.gz) - [2](https://berkeley.box.com/shared/static/pf242utt7txld8f2xhv69qzn0k9w5auz.gz) - [3](https://berkeley.box.com/shared/static/675u01jyuunqy3text670a6g3dtv5rmi.gz) - [4](https://berkeley.box.com/shared/static/b0zwe2uufkxarovf33pw6ha177cslja4.gz) - [5](https://berkeley.box.com/shared/static/uo89m00bhvst72fsp0g9dewkwftslvi9.gz) |
 
 * **Trajectories for different penetration rates:**
 
