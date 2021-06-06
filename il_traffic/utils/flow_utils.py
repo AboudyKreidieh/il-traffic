@@ -17,8 +17,8 @@ from flow.networks import I210SubNetwork
 from flow.networks.highway import ADDITIONAL_NET_PARAMS as HIGHWAY_NET_PARAMS
 from flow.utils.registry import make_create_env
 from flow.controllers import IDMController
-from flow.energy_models.poly_fit_autonomie import PFMMidsizeSedan
-from flow.energy_models.poly_fit_autonomie import PFM2019RAV4
+# from flow.energy_models.poly_fit_autonomie import PFMMidsizeSedan
+# from flow.energy_models.poly_fit_autonomie import PFM2019RAV4
 
 import il_traffic.config as config
 from il_traffic import ControllerEnv
@@ -469,7 +469,7 @@ def get_flow_params(network_type,
         ),
         routing_controller=(ContinuousRouter, {}),
         num_vehicles=0,
-        energy_model=PFMMidsizeSedan,
+        # energy_model=PFMMidsizeSedan,
     )
     vehicles.add(
         "av",
@@ -486,7 +486,7 @@ def get_flow_params(network_type,
         ),
         routing_controller=(ContinuousRouter, {}),
         num_vehicles=0,
-        energy_model=PFM2019RAV4,
+        # energy_model=PFM2019RAV4,
     )
 
     flow_params = dict(

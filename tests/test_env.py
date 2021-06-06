@@ -291,10 +291,6 @@ class TestControllerEnv(unittest.TestCase):
         )
         self.assertEqual(env.k.network.get_max_speed("119257908#3", 0), 5.0)
 
-    def test_get_gallons(self):
-        """Validate the functionality of the get_gallons method."""
-        pass  # TODO
-
 
 # =========================================================================== #
 #                               Auxiliary files                               #
