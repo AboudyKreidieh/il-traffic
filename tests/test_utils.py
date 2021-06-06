@@ -9,10 +9,10 @@ import tensorflow as tf
 import numpy as np
 
 import il_traffic.config as config
-from il_traffic import IntelligentDriverModel
-from il_traffic import FollowerStopper
-from il_traffic import PISaturation
-from il_traffic import TimeHeadwayFollowerStopper
+from il_traffic.core.experts import IntelligentDriverModel
+from il_traffic.core.experts import FollowerStopper
+from il_traffic.core.experts import PISaturation
+from il_traffic.core.experts import TimeHeadwayFollowerStopper
 from il_traffic.utils.flow_utils import get_emission_path
 from il_traffic.utils.flow_utils import get_network_params
 from il_traffic.utils.flow_utils import get_base_env_params

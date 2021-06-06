@@ -7,7 +7,7 @@ import sys
 
 from flow.core.util import ensure_dir
 
-from il_traffic import FeedForwardModel
+from il_traffic.core.model import FeedForwardModel
 from il_traffic.scripts.simulate import HIGHWAY_PARAMS
 from il_traffic.scripts.simulate import rollout
 from il_traffic.scripts.simulate import plot_results

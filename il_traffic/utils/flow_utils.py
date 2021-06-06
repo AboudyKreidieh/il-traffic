@@ -21,11 +21,11 @@ from flow.energy_models.poly_fit_autonomie import PFMMidsizeSedan
 from flow.energy_models.poly_fit_autonomie import PFM2019RAV4
 
 import il_traffic.config as config
-from il_traffic import ControllerEnv
-from il_traffic import IntelligentDriverModel
-from il_traffic import FollowerStopper
-from il_traffic import PISaturation
-from il_traffic import TimeHeadwayFollowerStopper
+from il_traffic.core.env import ControllerEnv
+from il_traffic.core.experts import IntelligentDriverModel
+from il_traffic.core.experts import FollowerStopper
+from il_traffic.core.experts import PISaturation
+from il_traffic.core.experts import TimeHeadwayFollowerStopper
 
 
 def get_emission_path(controller_type, network_type, network_params):
