@@ -1,3 +1,5 @@
+[![tests](https://github.com/AboudyKreidieh/il-traffic/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/AboudyKreidieh/il-traffic/actions/workflows/ci.yml)
+
 # Learning Energy-Efficient Driving Behaviors by Imitating Experts
 
 Implementation of the code for the paper titled "Learning Energy-Efficient 
