@@ -516,13 +516,13 @@ class TestSampler(unittest.TestCase):
         np.random.seed(0)
 
         # Create the sampler.
-        sampler = Sampler(
-            env_name="i210",
-            render=False,
-            expert=0,
-            env_params={},
-            env_num=0
-        )
+        # sampler = Sampler(
+        #     env_name="i210",
+        #     render=False,
+        #     expert=0,
+        #     env_params={},
+        #     env_num=0
+        # )
 
         # Check the method.
         # np.testing.assert_almost_equal(
