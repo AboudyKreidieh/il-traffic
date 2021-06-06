@@ -30,7 +30,9 @@ links:
 This repository is an extension of the [Flow](https://flow-project.github.io/)
 repository. If you have not previously installed Flow, begin by following the 
 setup instruction provided 
-[here](https://flow.readthedocs.io/en/latest/flow_setup.html).
+[here](https://flow.readthedocs.io/en/latest/flow_setup.html). Note that if you
+are experiences issues with this, you may want to consider downloading and 
+using the docker image instead (see [Section 1.2](#12-docker-installation)).
 
 Once Flow has been installed, open a terminal and set the working directory of
 the terminal to match the path to this repository:
@@ -70,7 +72,31 @@ The test should return a message along the lines of:
 
 ### 1.2 Docker Installation
 
+The current working version of Flow is missing some features, thereby 
+preventing some operations within this repository from successfully running. As
+a temporary measure, we have created a docker image that can be used to run any 
+commands described within this README. To get the docker image running, first 
+be sure to [set up docker](https://docs.docker.com/get-docker/) on your 
+machine. Next, download the docker image for this repository by clicking on 
+[this link](). The link will download a "TODO.TODO" file containing the 
+contents of the docker image. To install the image onto your machine, run:
+
+```shell script
 TODO
+```
+
+Once this is done, you can run any command provided in this repository by 
+simply prefixing it with `TODO`. For example, if you wish to 
+[run a simulation](#21-simulating-baseline-and-expert-models), simply type:
+
+```shell script
+TODO
+```
+
+> **Note:** When using graphical features with the docker image, care must be 
+> taken to provide the display information to the docker execution script 
+> above. The way in which this is done also differs from machine to machine, 
+> making it difficult to arbitrarily assign in this document.
 
 ### 1.3 Downloading Warmup States
 
