@@ -78,7 +78,7 @@ a temporary measure, we have created a docker image that can be used to run any
 commands described within this README. To get the docker image running, first 
 be sure to [set up docker](https://docs.docker.com/get-docker/) on your 
 machine. Next, download the docker image for this repository by clicking on 
-[this link](). The link will download a "TODO.TODO" file containing the 
+[this link](TODO). The link will download a "TODO.TODO" file containing the 
 contents of the docker image. To install the image onto your machine, run:
 
 ```shell script
