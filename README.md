@@ -15,7 +15,6 @@ links:
 1. [Setup Instructions](#1-setup-instructions)  
     1.1. [Basic Installation](#11-basic-installation)  
     1.2. [Docker Installation](#12-docker-installation)  
-    1.3. [Downloading Warmup States](#13-downloading-warmup-states)  
 2. [Usage](#2-usage)  
     2.1. [Simulating Baseline and Expert Models](#21-simulating-baseline-and-expert-models)  
     2.2. [Imitating Experts](#22-imitating-experts)  
@@ -98,40 +97,6 @@ TODO
 > above. The way in which this is done also differs from machine to machine, 
 > making it difficult to arbitrarily assign in this document.
 
-### 1.3 Downloading Warmup States
-
-Warmup states provide initializations to the positions and speeds of vehicles 
-within a given network. These states allow us to subvert the need to run 
-multiple "warmup" simulation steps to allow for the onset of congestion to 
-occur. For this repository, we've created warmup files for both the "highway" 
-and "i210" networks. These files are:
-
-1. taken after 3600 seconds worth of simulation steps 
-2. taken for inflow rates ranging from 1900 to 2300 veh/hr/lane in increments 
-   of 50
-3. taken for downstream speed limits ranging from 5 to 7 m/s in increments of 1
-
-To install the warmup file programmatically, run from the base directory:
-
-```shell script
-il_traffic/scripts/load_warmup.sh
-```
-
-This will create a new folder in the base directory called "warmup" with to 
-additional sub-folders called "highway" and "i210" which contain the warmup 
-files, and a description.csv file. If this operation is successful, all 
-[simulations](#21-simulating-baseline-and-expert-models) and 
-[evaluations](#23-evaluating-results) can now be run using the `--use_warmup` 
-flag.
-
-**Note:** If you would rather download the files separately, you can click on
-the individual links below:
-
-| Network   | Links          |
-|-----------|----------------|
-| highway   | [click here](https://berkeley.box.com/shared/static/t7pbo49rxplor1fv1jczgv9cczu4bwg2.gz) |
-| i210      | [click here](https://berkeley.box.com/shared/static/99o6sboo6p19che1q0gpbbzgk93avvw7.gz) |
-
 ## 2. Usage
 
 We describe in the following subsections how different hand-designed baseline 
@@ -163,9 +128,6 @@ where the descriptions to additional arguments can be seen by running:
 ```shell script
 python il_traffic/scripts/simulate.py --help
 ```
-
-> **Note:**  If you are using the `--use_warmup` flag, be sure to download the 
-> warmup files first, see [this section](#13-downloading-warmup-states).
 
 The above script will start a simulation of the network that can be visualized 
 if `--render` is set. Moreover, if `--gen_emission` is set, this script will 
@@ -227,9 +189,6 @@ method before, and the additional arguments can be seen by running:
 ```shell script
 python il_traffic/scripts/evaluate.py --help
 ```
-
-> **Note:**  If you are using the `--use_warmup` flag, be sure to download the 
-> warmup files first, see [this section](#13-downloading-warmup-states).
 
 If the `--gen_emission` flag has been set, the script will create a new 
 "results" folder in the original folder with the model containing trajectory 

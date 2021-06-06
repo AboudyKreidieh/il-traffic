@@ -23,6 +23,7 @@ class BuildExt(_build_ext.build_ext):
     def run(self):
         """Install traci wheels."""
         subprocess.check_call(['pip', 'install', 'ray[tune]'])
+        subprocess.check_call(['il_traffic/scripts/load_warmup.sh'])
 
 
 class BinaryDistribution(Distribution):
