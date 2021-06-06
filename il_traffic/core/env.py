@@ -389,6 +389,19 @@ class ControllerEnv(Env):
                 # output observations.
                 obs_from_history = np.concatenate(
                     self._obs_history[veh_id][::-skip])
+
+                # Scale values by current step information.
+                if self.env_params.additional_params["obs_frames"] > 1:
+                    for i in range(1, int(len(obs_from_history) / 3)):
+                        obs_from_history[3 * i] = \
+                            obs_from_history[3 * i] - obs_from_history[0]
+                        obs_from_history[3 * i + 1] = \
+                            obs_from_history[3 * i + 1] - obs_from_history[1]
+                        obs_from_history[3 * i + 2] = \
+                            obs_from_history[3 * i + 2] - obs_from_history[0]
+                    obs_from_history[2] = \
+                        obs_from_history[2] - obs_from_history[0]
+
                 obs_vehicle[:len(obs_from_history)] = obs_from_history
             else:
                 # Add the most recent observation.
