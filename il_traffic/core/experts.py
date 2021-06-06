@@ -397,7 +397,8 @@ class TimeHeadwayFollowerStopper(VelocityController):
     FollowerStopper class are designed to be more conservative, allowing for
     safer driving to occur.
 
-    See: TODO
+    See: "Reachability Analysis for FollowerStopper: Safety Analysis and
+    Experimental Results", in submission
 
     Attributes
     ----------

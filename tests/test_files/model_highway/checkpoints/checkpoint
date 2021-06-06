@@ -1,0 +1,2 @@
+model_checkpoint_path: "itr-50"
+all_model_checkpoint_paths: "itr-50"

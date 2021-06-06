@@ -22,6 +22,7 @@ from il_traffic.utils.tf_util import layer
 from il_traffic.utils.tf_util import get_trainable_vars
 from il_traffic.utils.visualize import process_emission
 from il_traffic.utils.sampler import Sampler
+from il_traffic.utils.misc import dict_update
 
 
 class TestFlowUtils(unittest.TestCase):
@@ -439,7 +440,6 @@ class TestFlowUtils(unittest.TestCase):
         This is done for the following cases:
 
         1. TODO
-        2. TODO
         """
         pass  # TODO
 
@@ -449,7 +449,13 @@ class TestMisc(unittest.TestCase):
 
     def test_dict_update(self):
         """Validate the functionality of the dict_update method."""
-        pass  # TODO
+        dict1 = {"hello": {"world": {"1": "foo"}}}
+        dict2 = {"hello": {"world": {"2": "bar"}}}
+
+        self.assertDictEqual(
+            dict_update(dict1, dict2),
+            {"hello": {"world": {"1": "foo", "2": "bar"}}}
+        )
 
 
 class TestSampler(unittest.TestCase):
@@ -476,11 +482,9 @@ class TestSampler(unittest.TestCase):
             env_num=0
         )
 
-        # Check the attributes.
-        pass  # TODO
-
         # Check the wrapped environment.
-        pass  # TODO
+        self.assertEqual(
+            sampler.env.k.network.network.__class__.__name__, "HighwayNetwork")
 
         # Delete the sampler.
         del sampler
@@ -498,11 +502,9 @@ class TestSampler(unittest.TestCase):
             env_num=0
         )
 
-        # Check the attributes.
-        pass  # TODO
-
         # Check the wrapped environment.
-        pass  # TODO
+        self.assertEqual(
+            sampler.env.k.network.network.__class__.__name__, "I210SubNetwork")
 
         # Delete the sampler.
         del sampler
@@ -688,6 +690,9 @@ class TestSampler(unittest.TestCase):
 
     def test_horizon(self):
         """Validate the functionality of the horizon method."""
+        # Maintain the correct horizon for test.
+        os.environ["TEST_FLAG"] = "False"
+
         # Create the sampler.
         sampler = Sampler(
             env_name="i210",
@@ -917,40 +922,6 @@ class TestVisualize(unittest.TestCase):
 
         # Delete the created file.
         shutil.rmtree(directory)
-
-    def test_get_global_position(self):
-        """Validate the functionality of the get_global_position method.
-
-        This is done for the following cases:
-
-        1. highway
-        2. i210
-        """
-        # =================================================================== #
-        #                             test case 1                             #
-        # =================================================================== #
-
-        # Create a dataframe for the highway network.
-        pass  # TODO
-
-        # Create the global_position column.
-        pass  # TODO
-
-        # Check the output from the global_position column.
-        pass  # TODO
-
-        # =================================================================== #
-        #                             test case 2                             #
-        # =================================================================== #
-
-        # Create a dataframe for the highway network.
-        pass  # TODO
-
-        # Create the global_position column.
-        pass  # TODO
-
-        # Check the output from the global_position column.
-        pass  # TODO
 
 
 if __name__ == '__main__':
