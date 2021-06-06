@@ -214,24 +214,9 @@ data similar to the one created by the
 
 The trained models and trajectories provided within the paper and website are 
 available to be downloaded and further analyzed. To download the existing 
-models and trajectories, run:
-
-```shell script
-il_traffic/scripts/load_data.sh
-```
-
-where the descriptions to additional arguments can be seen by running:
-
-```shell script
-il_traffic/scripts/load_data.sh --help
-```
-
-The script will create a "data" folder with all the relevant models and/or 
-trajectories downloaded. The individual folders will contain content similar to
-what is produced by the `simulate.py` and `evaluate.py` scripts.
-
-**Note:** If you would like to install the trajectories and models via 
-separate links, you can do so from the below tables:
+models and trajectories, click on any of the relevant links below. For the 
+trajectory data, the individual folders will contain content similar to what is
+produced by the `simulate.py` and `evaluate.py` scripts.
 
 * **Trained models:**
 
@@ -244,28 +229,28 @@ separate links, you can do so from the below tables:
 
 | Controller          | Penetration Rate | Trajectories (5 seeds) |
 |---------------------|------------------|------------------------|
-| Baseline            | 0 %              | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-| Follower Stopper    | 2.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-|                     | 5.0 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-|                     | 7.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-|                     | 10.0 %           | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-| Imitated (1 frame)  | 2.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-|                     | 5.0 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-|                     | 7.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-|                     | 10.0 %           | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-| Imitated (5 frames) | 2.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-|                     | 5.0 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-|                     | 7.5 %            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-|                     | 10.0 %           | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Baseline            | 0 %              | [1](https://berkeley.box.com/shared/static/prnu669t27xbitd0we456xbrtgmcsh34.gz) - [2](https://berkeley.box.com/shared/static/o0w91x9veuq7oi2phksh9wwatnyqql42.gz) - [3](https://berkeley.box.com/shared/static/a276ngkvpndgi84fg5ps7bwy84jq4e4l.gz) - [4](https://berkeley.box.com/shared/static/l2l18z5stg0xfq8wt9c77o88gtxx1ht6.gz) - [5](https://berkeley.box.com/shared/static/qez85o986jfq9e31fu6wyxrfmi9ywg0n.gz) |
+| Follower Stopper    | 2.5 %            | [1](https://berkeley.box.com/shared/static/x0zr73whvoac6drq4icqi6jdbtj4lcy5.gz) - [2](https://berkeley.box.com/shared/static/q41gvncm997i19n08qz2mya0p804jsb7.gz) - [3](https://berkeley.box.com/shared/static/yvhp5mtjj7vgo9wng6n27f9akeoiobdu.gz) - [4](https://berkeley.box.com/shared/static/qxv4yhcfg2i42k0t9m1g8ffodif9hbzy.gz) - [5](https://berkeley.box.com/shared/static/fuqen0cvy5j6jc6we71b13r2r10fr8zk.gz) |
+|                     | 5.0 %            | [1](https://berkeley.box.com/shared/static/36p4e11hhcsa9fbz7gvckldw4e72ri4r.gz) - [2](https://berkeley.box.com/shared/static/my0poqxspqqbw0au05v7y8a6fd2acvl9.gz) - [3](https://berkeley.box.com/shared/static/weff1cakpbgazu8r9190ec8l92yy6zbk.gz) - [4](https://berkeley.box.com/shared/static/rol6znt7o1aevhdsh01e12kjwbrisg4l.gz) - [5](https://berkeley.box.com/shared/static/dbbqrmksfb0g3ta1zv3jotwq08eekqdh.gz) |
+|                     | 7.5 %            | [1](https://berkeley.box.com/shared/static/qjz7kqbefngwo9zb45ki3pz5tblg7mhg.gz) - [2](https://berkeley.box.com/shared/static/tqlur0tzwlqa7t1bn20j7fmwrs6dzp5v.gz) - [3](https://berkeley.box.com/shared/static/1h2rzijp54xz5sduave39lpuebxd1xy6.gz) - [4](https://berkeley.box.com/shared/static/pbda61teut4llj2n5o97elngh9i8txwf.gz) - [5](https://berkeley.box.com/shared/static/ucrz9jk2waunnohmnxcanwl6fynzitdt.gz) |
+|                     | 10.0 %           | [1](https://berkeley.box.com/shared/static/cno3bf7isq6jjqnitcj6ilfkfg2xz350.gz) - [2](https://berkeley.box.com/shared/static/7av5ep4aknobmcopr0nnp76d52ypfcyy.gz) - [3](https://berkeley.box.com/shared/static/t43h4wusbefwz0k46de1ieepxozygvkj.gz) - [4](https://berkeley.box.com/shared/static/j2q7rpcv890cc882qw5gbfgjnw17ttr5.gz) - [5](https://berkeley.box.com/shared/static/usimf3a41xza5knv3kc2c5jjclly0b1u.gz) |
+| Imitated (1 frame)  | 2.5 %            | [1](https://berkeley.box.com/shared/static/fcu95j0667liuoihffgyvbu7n1d4q322.gz) - [2](https://berkeley.box.com/shared/static/qbcyzlxknknc5vsy7npl9wd2k429zpgf.gz) - [3](https://berkeley.box.com/shared/static/7lywwdomvhi70xyce8nxfltznqp81m6z.gz) - [4](https://berkeley.box.com/shared/static/3wvv6qer9dnaxe5ku58153zr90nfexh2.gz) - [5](https://berkeley.box.com/shared/static/at1rb0uiy24x55f4zu08q735ig5b00zy.gz) |
+|                     | 5.0 %            | [1](https://berkeley.box.com/shared/static/hl3x3gd40irtg7zyklrgqqdvau9yy10i.gz) - [2](https://berkeley.box.com/shared/static/rfojxo09sszzfnsndagg197b6aqr3pz6.gz) - [3](https://berkeley.box.com/shared/static/qgsids7udtm3zbpvtosa4es8ums7adqk.gz) - [4](https://berkeley.box.com/shared/static/r7riy0kkj02hxkhgcv0jasm0ttfb7qo0.gz) - [5](https://berkeley.box.com/shared/static/967tts0ju3z7zwrgdhijridtz7zxjk38.gz) |
+|                     | 7.5 %            | [1](https://berkeley.box.com/shared/static/f8gqgw5g6av3dx10qbznv6r39zdvq2s3.gz) - [2](https://berkeley.box.com/shared/static/yhk16gof5g0lhlsayplbooo3utudo710.gz) - [3](https://berkeley.box.com/shared/static/hfbq4d6en35sa44wbi4s9gvt69saxtyr.gz) - [4](https://berkeley.box.com/shared/static/ug6mfof9b5x1kekoh4qtlyhqw7sailbs.gz) - [5](https://berkeley.box.com/shared/static/6zifdj220bdt8pk3fezr1ddmy8lixzru.gz) |
+|                     | 10.0 %           | [1](https://berkeley.box.com/shared/static/ctxmq5df8eutu3jh8v29i5xtf238fbuj.gz) - [2](https://berkeley.box.com/shared/static/zdcxqh0mowm4pzct03ge2x33volsbz9l.gz) - [3](https://berkeley.box.com/shared/static/g9a4mvxv6egvjztlx3szibzhqmrgkfbf.gz) - [4](https://berkeley.box.com/shared/static/mh23kstmh20imge2d0urs273e1xqjxks.gz) - [5](https://berkeley.box.com/shared/static/qjosxfsjbow65npy36qw5adg68nlhu7s.gz) |
+| Imitated (5 frames) | 2.5 %            | [1](https://berkeley.box.com/shared/static/wm0me2ybusp9g1zvh63bq1e6nwqlldjt.gz) - [2](https://berkeley.box.com/shared/static/cbjehos64wqtov1418qh1lb2k12bvzsd.gz) - [3](https://berkeley.box.com/shared/static/ep147k9dqniw72tkhnlh9ly7d9e9ae8t.gz) - [4](https://berkeley.box.com/shared/static/quk1httrhzxnop7ad4nsur9h8mzl5mhm.gz) - [5](https://berkeley.box.com/shared/static/gejstg004p19e8afkzd54k2496lrc2d9.gz) |
+|                     | 5.0 %            | [1](https://berkeley.box.com/shared/static/fhg7xygx5vy3m02kxrfdxm9wm6egxw1n.gz) - [2](https://berkeley.box.com/shared/static/nos7u1z86lf341mxq1f96g3lb7cci9x7.gz) - [3](https://berkeley.box.com/shared/static/css50i9mzu3vshbnm6u31hrovv8lpw9p.gz) - [4](https://berkeley.box.com/shared/static/qjgybk8v112wjzaow9893gd91aag4zwu.gz) - [5](https://berkeley.box.com/shared/static/nzahp4xeah6ym8qfqubu8epamm6hhjs3.gz) |
+|                     | 7.5 %            | [1](https://berkeley.box.com/shared/static/hfhn0vpev8yyxekxq82uojtol6iivw4q.gz) - [2](https://berkeley.box.com/shared/static/8hlqksfohpds6on6h4cyu28bvunwt23k.gz) - [3](https://berkeley.box.com/shared/static/qrie3tmrx80sg3q1nlu14mycupsd6dhi.gz) - [4](https://berkeley.box.com/shared/static/po8fxgy1tnlicybbve8323vk4vd7m1mw.gz) - [5](https://berkeley.box.com/shared/static/3zsnft12ljee38kmjp3ploh0uackgb2h.gz) |
+|                     | 10.0 %           | [1](https://berkeley.box.com/shared/static/m3n4yv1gudjfx6w78ndxn9188u0c0lul.gz) - [2](https://berkeley.box.com/shared/static/tuzk2gxpmk3ymrz66azyqb9d3cmzlyft.gz) - [3](https://berkeley.box.com/shared/static/qm1ea3jq0sgdedv0z8np9y7p03hgui4e.gz) - [4](https://berkeley.box.com/shared/static/0jc7u3oveh2k6aoif1g5p8dohf5swzzy.gz) - [5](https://berkeley.box.com/shared/static/gqznwvkqywfh0weinomo3s3qsbi40t7f.gz) |
 
 * **Trajectories from robustness tests:**
 
 | Controller          | Trajectories (5 seeds) |
 |---------------------|------------------------|
-| Baseline            | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-| Follower Stopper    | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-| Imitated (1 frame)  | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
-| Imitated (5 frames) | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Baseline            | [1](https://berkeley.box.com/shared/static/abdfy0wzdhq0942f33l2kwpll2l191nm.gz) - [2](https://berkeley.box.com/shared/static/p1m9wb4eswde5ynngeku8683482x9xnh.gz) - [3](https://berkeley.box.com/shared/static/po9o9pyz9kfd5pteibsmicibrxcidrwd.gz) - [4](https://berkeley.box.com/shared/static/p8qpp78ctpoqrmuzrux3y7zk6mlo76b2.gz) - [5](https://berkeley.box.com/shared/static/l06cy70zygxdg5ofbahdle72nkfnjtx0.gz) |
+| Follower Stopper    | [1](https://berkeley.box.com/shared/static/joa9hekreykej197x6o3muu6uefts15u.gz) - [2](https://berkeley.box.com/shared/static/9t1p2m0srgzzlt007jcpu4k1yv7fpe0l.gz) - [3](https://berkeley.box.com/shared/static/d8qjxj5owj39cku4xk85xfu0odwal9ez.gz) - [4](https://berkeley.box.com/shared/static/batvdnkk8vgreyx95nzg306bhtq3mm4s.gz) - [5](https://berkeley.box.com/shared/static/sckwfcoo44c4ur6fhc4hzoz7md6yldua.gz) |
+| Imitated (1 frame)  | [1](https://berkeley.box.com/shared/static/sx730sigo0vugfs11ow8dnw0d4iy1e4k.gz) - [2](https://berkeley.box.com/shared/static/mr3d4e13upejwm0r9bg61rwv78vdh8gj.gz) - [3](https://berkeley.box.com/shared/static/hvn1h4gxbbbztlsytaweagvtg6tf3v3m.gz) - [4](https://berkeley.box.com/shared/static/dxwka9e6i9hpk7apesc5s4k9ygcqp28t.gz) - [5](https://berkeley.box.com/shared/static/1nj7wiox3prss4n46nysa1vck0a9ueju.gz) |
+| Imitated (5 frames) | [1](https://berkeley.box.com/shared/static/k866ifx1q89smxhxspy9wriwp6dme9os.gz) - [2](https://berkeley.box.com/shared/static/r4wxftpcjoodl20ia2fkz3j7563g5a7i.gz) - [3](https://berkeley.box.com/shared/static/1yae5hnga57wctou954npzcz7g7ua2fq.gz) - [4](https://berkeley.box.com/shared/static/vit29p22ftynjq1fojg7eok21f6nag9p.gz) - [5](https://berkeley.box.com/shared/static/8pe65me9k00x4ugnr9c9ewp0xdht535n.gz) |
 
 ## 3. Citing
 

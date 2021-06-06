@@ -33,9 +33,9 @@ fi
 cd $IL_TRAFFIC_DIRECTORY/"warmup"
 
 # Download and extract highway warmup files.
-# TODO: download
-tar -xvzf highway.tar.gz && rm highway.tar.gz
+wget https://berkeley.box.com/shared/static/t7pbo49rxplor1fv1jczgv9cczu4bwg2.gz
+tar -xvzf t7pbo49rxplor1fv1jczgv9cczu4bwg2.gz && rm t7pbo49rxplor1fv1jczgv9cczu4bwg2.gz
 
 # Download and extract I-210 warmup files.
-# TODO: download
-tar -xvzf i210.tar.gz && rm i210.tar.gz
+wget https://berkeley.box.com/shared/static/99o6sboo6p19che1q0gpbbzgk93avvw7.gz
+tar -xvzf 99o6sboo6p19che1q0gpbbzgk93avvw7.gz && rm 99o6sboo6p19che1q0gpbbzgk93avvw7.gz
