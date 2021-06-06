@@ -54,7 +54,7 @@ def process_emission(emission_path, verbose):
     # Reduce to 3-decimal points.
     df = pd.read_csv(new_fp)
     df = df.round(3).astype(str)
-    df = df.replace(to_replace="\.0+$", value="", regex=True)
+    df = df.replace(to_replace="\.0+$", value="", regex=True)  # noqa: W605
     df = df.replace(to_replace="nan", value="", regex=True)
 
     # Keep only relevant columns.
