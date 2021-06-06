@@ -146,11 +146,20 @@ if `--render` is set. Moreover, if `--gen_emission` is set, this script will
 create a folder in "expert_data/{network}/{controller}/{inflow}-{end_speed}" 
 containing the following files:
 
-* avg-speed.png : TODO
-* emission.csv : TODO
-* mpg.csv : TODO
-* ts-{0-4}.png : TODO
-* tt.json : TODO
+* avg-speed.png : a plot of the avg/std speeds of all vehicles at every time 
+  step.
+* emission.csv : the trajectory data collected from the simulation, containing 
+  values that denote the speed, position, and accelerations conducted by all 
+  vehicles at all time steps.
+* mpg.csv : the energy values each individual vehicle experiences after moving 
+  forward for 50 meters (in miles-per-gallon, or mpg).
+* mpg.png : a plot of the mpg values contained in mpg.csv, with a line plot 
+  used to represent the average values across time.
+* ts-{0-4}.png : visualization of the trajectories of individual vehicles as 
+  seen as a time-space diagram on each individual lane. The number after the 
+  dash represents the lane number (0 for the highway and 0-4 for the I-210).
+* tt.json : the time it takes every vehicle to traverse the network to the 
+  downstream edge.
 
 ### 2.2 Imitating Experts
 
@@ -228,7 +237,7 @@ separate links, you can do so from the below tables:
 
 | Controller          | Model (5 seeds) |
 |---------------------|-----------------|
-| Imitated (1 frame)  | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
+| Imitated (1 frame)  | [1](https://berkeley.box.com/shared/static/ueyl2857e199rqee3k9mr7zsfg1lztky.gz) - [2](https://berkeley.box.com/shared/static/8t24lxu8igpmk1jv8nakojy7hrg72y12.gz) - [3](https://berkeley.box.com/shared/static/su1s2unsotcs0xy08c2x1xug3sjdesuw.gz) - [4](TODO) - [5](TODO) |
 | Imitated (5 frames) | [1](TODO) - [2](TODO) - [3](TODO) - [4](TODO) - [5](TODO) |
 
 * **Trajectories for different penetration rates:**
