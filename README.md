@@ -54,7 +54,7 @@ Finally, install the contents of the repository onto your conda environment (or
 your local python build) by running the following command:
 
 ```shell script
-pip install -e .
+pip install --use-deprecated=legacy-resolver -e .
 ```
 
 If you would like to (optionally) validate that the repository successfully
@@ -79,25 +79,53 @@ a temporary measure, we have created a docker image that can be used to run any
 commands described within this README. To get the docker image running, first 
 be sure to [set up docker](https://docs.docker.com/get-docker/) on your 
 machine. Next, download the docker image for this repository by clicking on 
-[this link](TODO). The link will download a "TODO.TODO" file containing the 
-contents of the docker image. To install the image onto your machine, run:
+[this link](https://berkeley.box.com/shared/static/swh3mmhv5g1z7jn2bsb5kqczga1f1qyf.tar).
+The link will download a "il-traffic.tar" file containing the contents of the 
+docker image. To install the image onto your machine, run:
 
 ```shell script
-TODO
+docker load -i il-traffic.tar
 ```
 
 Once this is done, you can run any command provided in this repository by 
-simply prefixing it with `TODO`. For example, if you wish to 
-[run a simulation](#21-simulating-baseline-and-expert-models), simply type:
+prefixing it with `docker run -it --rm il-traffic`, replacing `python` with 
+`python3`, and initializing the path to the script with `/`. For example, if 
+you wish to [run a simulation](#21-simulating-baseline-and-expert-models), 
+type:
 
 ```shell script
-TODO
+docker run -it --rm il-traffic python3 /il_traffic/scripts/simulate.py
 ```
 
 > **Note:** When using graphical features with the docker image, care must be 
 > taken to provide the display information to the docker execution script 
 > above. The way in which this is done also differs from machine to machine, 
 > making it difficult to arbitrarily assign in this document.
+
+Another consideration when using docker is the redirection of logged data. The 
+above script alone will not send any generated trajectory or imitation data to 
+the host server. Instead, it will assume the data is to be stored in the image, 
+and subsequently deleted once the instance is over. To redirect data to your 
+local (host) machine, you will need to use the `-v` flag within docker. This 
+can be done for each relevant script as follows:
+
+- Simulation
+
+  ```shell script
+  docker run -it --rm -v $PWD/expert_data:/expert_data il-traffic python3 /il_traffic/scripts/simulate.py  # plus additional arguments
+  ```
+
+- Imitation
+
+  ```shell script
+  docker run -it --rm -v $PWD/imitation_data:/imitation_data il-traffic python3 /il_traffic/scripts/imitate.py  # plus additional arguments
+  ```
+
+- Evaluation (assuming the path to the trained model is under `MODEL_PATH`)
+
+  ```shell script
+  docker run -it --rm -v $MODEL_PATH:$MODEL_PATH il-traffic python3 /il_traffic/scripts/evaluate.py $MODEL_PATH  # plus additional arguments
+  ```
 
 ## 2. Usage
 
