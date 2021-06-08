@@ -434,15 +434,6 @@ class TestFlowUtils(unittest.TestCase):
         self.assertRaises(
             AssertionError, get_rl_env_params, env_name="woops")
 
-    def test_get_flow_params(self):
-        """Validate the functionality of the get_flow_params method.
-
-        This is done for the following cases:
-
-        1. TODO
-        """
-        pass  # TODO
-
 
 class TestMisc(unittest.TestCase):
     """Tests for the features in core/utils/misc.py."""
