@@ -55,8 +55,8 @@ def parse_args(args):
         '--network_type',
         type=str,
         default='i210',
-        help='the type of network to simulate. Must be one of {"highway", '
-             '"i210"}.')
+        help='the type of network to simulate. One of {"highway", "i210", '
+             '"i24"}.')
     parser.add_argument(
         '--inflow',
         type=float,

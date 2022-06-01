@@ -12,8 +12,8 @@ from flow.networks import I210SubNetwork
 from flow.core.params import InFlows
 from flow.core.util import ensure_dir
 
-from il_traffic.core.experts import FlowExpertModel
-from il_traffic.core.experts import IntelligentDriverModel
+from il_traffic.experts import FlowExpertModel
+from il_traffic.experts import IntelligentDriverModel
 
 ADDITIONAL_ENV_PARAMS = dict(
     # the controller to use
@@ -232,7 +232,7 @@ class ControllerEnv(Env):
         1. It specifies the accelerations for all controlled vehicles. Vehicles
            before the warmup period and outside the control range have
            accelerations assigned based on the "human" acceleration controller.
-           Otherwise they are assigned accelerations based on the assigned
+           Otherwise, they are assigned accelerations based on the assigned
            controller. If rl_actions is not None, actions are overridden by
            this value.
         2. It computes the observed vehicles or visualization purposes.

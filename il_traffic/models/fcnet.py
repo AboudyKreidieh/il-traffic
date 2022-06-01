@@ -8,6 +8,26 @@ from il_traffic.utils.tf_util import get_trainable_vars
 from il_traffic.utils.tf_util import print_params_shape
 
 
+FEEDFORWARD_PARAMS = dict(
+    # the size of the neural network for the policy
+    layers=[32, 32, 32],
+    # the activation function to use in the neural network
+    act_fun=tf.nn.relu,
+    # the model learning rate
+    learning_rate=1e-3,  # TODO: move to algorithm
+    # whether to enable batch normalization
+    batch_norm=False,  # TODO: remove
+    # whether to enable dropout
+    dropout=False,  # TODO: move to algorithm (?)
+    # scale for the L2 regularization penalty
+    l2_penalty=0,  # TODO: move to algorithm (?)
+    # whether the model should be stochastic or deterministic
+    stochastic=False,  # TODO: remove
+    # the number of ensemble models to use
+    num_ensembles=1,  # TODO: remove
+)
+
+
 class FeedForwardModel(object):
     """Fully-connected model object.
 

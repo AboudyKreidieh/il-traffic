@@ -7,10 +7,10 @@ from time import strftime
 
 from flow.core.util import ensure_dir
 
-from il_traffic.core.alg import DAgger
-from il_traffic.core.model import FeedForwardModel
-from il_traffic.core.alg import FEEDFORWARD_PARAMS
-from il_traffic.core.env import ADDITIONAL_ENV_PARAMS
+from il_traffic.algorithms import DAgger
+from il_traffic.models.fcnet import FeedForwardModel
+from il_traffic.models.fcnet import FEEDFORWARD_PARAMS
+from il_traffic.environments.flow_env import ADDITIONAL_ENV_PARAMS
 
 
 def parse_args(args):
@@ -37,7 +37,7 @@ def parse_args(args):
         '--env_name',
         type=str,
         default='i210',
-        help='the environment to run')
+        help='the environment to run. One of {"highway", "i210", "i24"}')
     parser.add_argument(
         '--expert',
         type=int,

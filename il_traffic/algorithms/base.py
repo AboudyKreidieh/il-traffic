@@ -15,44 +15,24 @@ from tqdm import tqdm
 
 from flow.core.util import ensure_dir
 
+from il_traffic.models.fcnet import FEEDFORWARD_PARAMS
 from il_traffic.utils.misc import dict_update
 from il_traffic.utils.tf_util import make_session
 
 
-# =========================================================================== #
-#                    Model parameters for FeedForwardModel                    #
-# =========================================================================== #
+class ILAlgorithm(object):
+    """Base imitation learning algorithm object.
 
-FEEDFORWARD_PARAMS = dict(
-    # the size of the neural network for the policy
-    layers=[32, 32, 32],
-    # the activation function to use in the neural network
-    act_fun=tf.nn.relu,
-    # the model learning rate
-    learning_rate=1e-3,
-    # whether to enable batch normalization
-    batch_norm=False,
-    # whether to enable dropout
-    dropout=False,
-    # scale for the L2 regularization penalty
-    l2_penalty=0,
-    # whether the model should be stochastic or deterministic
-    stochastic=False,
-    # the number of ensemble models to use
-    num_ensembles=1,
-)
-
-
-class DAgger(object):
-    """DAgger training algorithm.
-
-    See: https://arxiv.org/pdf/1011.0686.pdf
+    This class is used to define most common operations between different
+    imitation learning procedures. The process through which models are updated
+    by each algorithm is then defined by the `train` method within individual
+    subclasses.
 
     Attributes
     ----------
     env_name : str
         the name of the training environment
-    model_cls : type [ il_traffic.FeedForwardModel ]
+    model_cls : type [ il_traffic.models.FeedForwardModel ]
         the type of model used during training
     num_envs : int
         number of environments used to run simulations in parallel. Each
@@ -110,7 +90,7 @@ class DAgger(object):
         dictionary of model-specific parameters
     graph : tf.compat.v1.Graph
         the tensorflow graph
-    model : il_traffic.FeedForwardModel
+    model : il_traffic.models.FeedForwardModel
         the model to imitate on
     sess : tf.compat.v1.Session
         the tensorflow session
@@ -150,7 +130,7 @@ class DAgger(object):
         ----------
         env_name : str
             the name of the training environment
-        model_cls : type [ il_traffic.FeedForwardModel ]
+        model_cls : type [ il_traffic.models.FeedForwardModel ]
             the type of model used during training
         expert : int
             the expert policy used. Must be one of:
@@ -541,26 +521,7 @@ class DAgger(object):
             the losses associated with the actions from each training step, and
             each ensemble
         """
-        # Covert samples to numpy array.
-        observations = np.array(self.samples["obs"])
-        actions = np.array(self.samples["actions"])
-
-        loss = []
-        for _ in tqdm(range(self.num_train_steps)):
-            # Sample a batch.
-            batch_i = [np.random.randint(0, len(actions), size=self.batch_size)
-                       for _ in range(self.model.num_ensembles)]
-
-            # Run the training step.
-            loss_step = self.model.train(
-                obs=[observations[batch_i[i], :]
-                     for i in range(self.model.num_ensembles)],
-                action=[actions[batch_i[i], :]
-                        for i in range(self.model.num_ensembles)],
-            )
-            loss.append(loss_step)
-
-        return loss
+        raise NotImplementedError
 
     def _log_results(self, file_path, start_time, train_itr, loss):
         """Log training statistics.

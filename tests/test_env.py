@@ -7,7 +7,7 @@ import tensorflow as tf
 from copy import deepcopy
 
 import il_traffic.config as config
-from il_traffic.core.experts import IntelligentDriverModel
+from il_traffic.experts import IntelligentDriverModel
 from il_traffic.utils.flow_utils import create_env
 
 
