@@ -1,7 +1,7 @@
+"""Discriminator class."""
 import torch
 import torch.nn as nn
-# from torch.nn import Module, Sequential, Linear, Tanh, Parameter, Embedding
-# from torch.distributions import Categorical, MultivariateNormal
+
 
 DISCRIMINATOR_PARAMS = dict(
     # the size of the neural network for the policy
@@ -10,14 +10,17 @@ DISCRIMINATOR_PARAMS = dict(
 
 
 class Discriminator(nn.Module):
-    """TODO."""
+    """Discriminator class."""
 
     def __init__(self, ob_dim, ac_dim, layers):
-        """
+        """Instantiate the model.
 
-        :param ob_dim:
-        :param ac_dim:
-        :param layers:
+        Parameters
+        ----------
+        ob_dim : int
+            number of elements in the state space
+        ac_dim : int
+            number of elements in the action space
         """
         super(Discriminator, self).__init__()
 

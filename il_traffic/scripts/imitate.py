@@ -115,7 +115,7 @@ def parse_args(args):
         '--gae_gamma',
         type=float,
         default=INFOGAIL_PARAMS["gae_gamma"],
-        help="TODO")
+        help="GAE discount factor")
     parser.add_argument(
         '--gae_lambda',
         type=float,
@@ -130,16 +130,16 @@ def parse_args(args):
         '--max_kl',
         type=float,
         default=INFOGAIL_PARAMS["max_kl"],
-        help="TODO")
+        help="the Kullback-Leibler loss threshold")
     parser.add_argument(
         '--cg_damping',
         type=float,
         default=INFOGAIL_PARAMS["cg_damping"],
-        help="TODO")
+        help="the compute gradient dampening factor")
     parser.add_argument(
         "--normalize_advantage",
         action='store_true',
-        help="TODO")
+        help="whether to normalize the advantage")
 
     # ======================================================================= #
     #                        Model-specific parameters                        #
@@ -160,8 +160,6 @@ def parse_args(args):
         "--model_params:stochastic",
         action='store_true',
         help="whether the policy is stochastic or deterministic")
-
-    # TODO: other models
 
     return parser.parse_args(args)
 
@@ -305,9 +303,9 @@ class Trainer(object):
 
         Returns
         -------
-        TODO
+        list
             the list of actions performed by the agent
-        list of float
+        list
             the list of cumulative episodic rewards
         """
         action_lst = []
@@ -360,7 +358,7 @@ class Trainer(object):
             the training iteration
         loss : float
             average imitation loss for the most recent epoch
-        action_lst : TODO
+        action_lst : list
             the list of actions performed by the agent
         rew_lst : list of float
             the list of cumulative episodic rewards

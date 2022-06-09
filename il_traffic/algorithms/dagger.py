@@ -4,22 +4,18 @@ See: https://arxiv.org/pdf/1011.0686.pdf
 """
 import numpy as np
 import os
-import pickle
 import torch
 import torch.nn as nn
+from torch import FloatTensor
 from tqdm import tqdm
 from collections import deque
 
 from il_traffic.algorithms.base import ILAlgorithm
+from il_traffic.environments.gym_env import GymEnv
+from il_traffic.environments.trajectory_env import TrajectoryEnv
 from il_traffic.models.fcnet import FeedForwardModel
 from il_traffic.models.fcnet import FEEDFORWARD_PARAMS
 from il_traffic.utils.misc import dict_update
-
-if torch.cuda.is_available():
-    from torch.cuda import FloatTensor
-    torch.set_default_tensor_type(torch.cuda.FloatTensor)
-else:
-    from torch import FloatTensor
 
 
 DAGGER_PARAMS = dict(
@@ -53,6 +49,7 @@ class DAgger(ILAlgorithm):
         self.l2_penalty = alg_params["l2_penalty"]
         self.batch_size = alg_params["batch_size"]
         self.buffer_size = alg_params["buffer_size"]
+        self.num_train_steps = alg_params["num_train_steps"]
 
         # Create an object to store samples.
         self.samples = {
@@ -96,25 +93,15 @@ class DAgger(ILAlgorithm):
 
     def load_demos(self, demo_dir):
         """See parent class."""
-        filenames = [x for x in os.listdir(demo_dir) if x.endswith(".pkl")]
+        if isinstance(self.env, TrajectoryEnv):
+            expert_obs, expert_acts = self._get_i24_samples(demo_dir)
+        elif isinstance(self.env, GymEnv):
+            expert_obs, expert_acts = self._get_pendulum_samples()
+        else:
+            raise NotImplementedError("Demos cannot be loaded.")
 
-        for ix, f_idx in enumerate(filenames):
-            fname = os.path.join(demo_dir, f_idx)
-            with open(fname, 'rb') as f:
-                data = pickle.load(f)
-
-            # Extract demonstrations.
-            s0, a0 = data[0]
-            for i in range(1, len(data)):
-                s1, a1 = data[i]
-                a = a1 - a0
-                self.samples["obs"].append(s0)
-                self.samples["expert_actions"].append(a)
-                s0 = s1
-                a0 = a1
-
-            print('{} Demo Trajectories Loaded. Total Experience={}'.format(
-                ix + 1, len(self.samples["obs"])))
+        self.samples["obs"] = expert_obs
+        self.samples["expert_actions"] = expert_acts
 
     def get_action(self, obs):
         """See parent class."""
@@ -138,7 +125,7 @@ class DAgger(ILAlgorithm):
     def update(self):
         """See parent class."""
         total_loss = []
-        for _ in range(self.num_train_steps):
+        for _ in tqdm(range(self.num_train_steps)):
             # Sample a batch.
             batch_i = np.random.randint(
                 0, len(self.samples["obs"]), size=self.batch_size)

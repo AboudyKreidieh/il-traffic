@@ -5,9 +5,11 @@ See: https://arxiv.org/pdf/1703.08840.pdf
 import numpy as np
 import os
 import torch
-from copy import deepcopy
+from torch import FloatTensor
 
 from il_traffic.algorithms.base import ILAlgorithm
+from il_traffic.environments.gym_env import GymEnv
+from il_traffic.environments.trajectory_env import TrajectoryEnv
 from il_traffic.models.discriminator import Discriminator
 from il_traffic.models.fcnet import FeedForwardModel
 from il_traffic.utils.torch_utils import get_flat_grads
@@ -16,27 +18,21 @@ from il_traffic.utils.torch_utils import set_params
 from il_traffic.utils.torch_utils import conjugate_gradient
 from il_traffic.utils.torch_utils import rescale_and_linesearch
 
-if torch.cuda.is_available():
-    from torch.cuda import FloatTensor
-    torch.set_default_tensor_type(torch.cuda.FloatTensor)
-else:
-    from torch import FloatTensor
-
 
 INFOGAIL_PARAMS = {
     # TODO
     "lambda": 0.001,
-    # TODO
+    # GAE discount factor
     "gae_gamma": 0.99,
     # TODO
     "gae_lambda": 0.99,
     # TODO
     "epsilon": 0.01,
-    # TODO
+    # the Kullback-Leibler loss threshold
     "max_kl": 0.01,
-    # TODO
+    # the compute gradient dampening factor
     "cg_damping": 0.1,
-    # TODO
+    # whether to normalize the advantage
     "normalize_advantage": True,
 }
 
@@ -71,7 +67,7 @@ class InfoGAIL(ILAlgorithm):
         self.pi = FeedForwardModel(
             ob_dim=state_dim,
             ac_dim=action_dim,
-            layers=[50, 50, 50],
+            layers=model_params["layers"],
             dropout=False,
             stochastic=True,
         )
@@ -80,7 +76,7 @@ class InfoGAIL(ILAlgorithm):
         self.v = FeedForwardModel(
             ob_dim=state_dim,
             ac_dim=1,
-            layers=[50, 50, 50],
+            layers=model_params["layers"],
             dropout=False,
             stochastic=False,
         )
@@ -89,7 +85,7 @@ class InfoGAIL(ILAlgorithm):
         self.d = Discriminator(
             ob_dim=state_dim,
             ac_dim=action_dim,
-            layers=[50, 50, 50],
+            layers=model_params["layers"],
         )
 
         # optimizer for the discriminator
@@ -136,35 +132,15 @@ class InfoGAIL(ILAlgorithm):
 
     def load_demos(self, demo_dir):
         """See parent class."""
-        num_steps_per_iter = 2000
-        exp_rwd_iter = []
-        exp_obs = []
-        exp_acts = []
-        steps = 0
-        while steps < num_steps_per_iter:
-            done = False
-            ep_rwds = []
-            ob = self.env.reset()
-            while not done and steps < num_steps_per_iter:
-                ob1, rwd, done, info = self.env.step(None)
+        if isinstance(self.env, TrajectoryEnv):
+            expert_obs, expert_acts = self._get_i24_samples(demo_dir)
+        elif isinstance(self.env, GymEnv):
+            expert_obs, expert_acts = self._get_pendulum_samples()
+        else:
+            raise NotImplementedError("Demos cannot be loaded.")
 
-                n_agents = len(ob)
-                for i in range(n_agents):
-                    exp_obs.append(ob[i])
-                    exp_acts.append(info["expert_action"][i])
-                ep_rwds.append(rwd)
-
-                ob = deepcopy(ob1)
-                steps += 1
-
-            if done:
-                exp_rwd_iter.append(np.sum(ep_rwds))
-
-        exp_rwd_mean = np.mean(exp_rwd_iter)
-        print("Expert Reward Mean: {}".format(exp_rwd_mean))
-
-        self.exp_obs = FloatTensor(np.array(exp_obs))
-        self.exp_acts = FloatTensor(np.array(exp_acts))
+        self.exp_obs = FloatTensor(np.array(expert_obs))
+        self.exp_acts = FloatTensor(np.array(expert_acts))
 
     def get_action(self, obs):
         """See parent class."""
@@ -220,7 +196,7 @@ class InfoGAIL(ILAlgorithm):
                 next_vals = torch.cat(
                     (self.v(ep_obs[i])[1:], FloatTensor([[0.]]))).detach()
                 ep_deltas = ep_costs.unsqueeze(-1) \
-                            + self.gae_gamma * next_vals - curr_vals
+                    + self.gae_gamma * next_vals - curr_vals
 
                 ep_advs = FloatTensor([
                     ((ep_gms * ep_lmbs)[:this_horizon - j].unsqueeze(-1)
@@ -254,7 +230,7 @@ class InfoGAIL(ILAlgorithm):
         self.opt_d.zero_grad()
         loss = torch.nn.functional.binary_cross_entropy_with_logits(
             exp_scores, torch.zeros_like(exp_scores)) \
-               + torch.nn.functional.binary_cross_entropy_with_logits(
+            + torch.nn.functional.binary_cross_entropy_with_logits(
             nov_scores, torch.ones_like(nov_scores))
         loss.backward()
         self.opt_d.step()
@@ -278,8 +254,7 @@ class InfoGAIL(ILAlgorithm):
             return hessian
 
         g = get_flat_grads(
-            ((-1) * (self.v(obs).squeeze() - rets) ** 2).mean(), self.v
-        ).detach()
+            (-(self.v(obs).squeeze() - rets) ** 2).mean(), self.v).detach()
         s = conjugate_gradient(Hv, g).detach()
 
         Hs = Hv(s).detach()
@@ -301,8 +276,7 @@ class InfoGAIL(ILAlgorithm):
             distb = self.pi(obs)
 
             return (advs * torch.exp(
-                distb.log_prob(acts)
-                - old_distb.log_prob(acts).detach()
+                distb.log_prob(acts) - old_distb.log_prob(acts).detach()
             )).mean()
 
         def kld():
@@ -313,11 +287,11 @@ class InfoGAIL(ILAlgorithm):
             cov = distb.covariance_matrix.sum(-1)
 
             return 0.5 * (
-                    (old_cov / cov).sum(-1)
-                    + (((old_mean - mean) ** 2) / cov).sum(-1)
-                    - self.env.action_space.shape[0]
-                    + torch.log(cov).sum(-1)
-                    - torch.log(old_cov).sum(-1)).mean()
+                (old_cov / cov).sum(-1)
+                + (((old_mean - mean) ** 2) / cov).sum(-1)
+                - self.env.action_space.shape[0]
+                + torch.log(cov).sum(-1)
+                - torch.log(old_cov).sum(-1)).mean()
 
         grad_kld_old_param = get_flat_grads(kld(), self.pi)
 

@@ -1,23 +1,10 @@
-"""TODO."""
+"""Various utility methods for the manipulation of torch objects."""
 import numpy as np
 import torch
 
 
 def get_flat_grads(f, net):
-    """TODO.
-
-    Parameters
-    ----------
-    f : TODO
-        TODO
-    net : TODO
-        TODO
-
-    Returns
-    -------
-    TODO
-        TODO
-    """
+    """Return the network gradient wrt an objective function in a 1d array."""
     flat_grads = torch.cat([
         grad.view(-1)
         for grad in torch.autograd.grad(f, net.parameters(), create_graph=True)
@@ -27,65 +14,23 @@ def get_flat_grads(f, net):
 
 
 def get_flat_params(net):
-    """TODO.
-
-    Parameters
-    ----------
-    net : TODO
-        TODO
-
-    Returns
-    -------
-    TODO
-        TODO
-    """
+    """Return the network parameters in a 1d array."""
     return torch.cat([param.view(-1) for param in net.parameters()])
 
 
 def set_params(net, new_flat_params):
-    """TODO.
-
-    Parameters
-    ----------
-    net : TODO
-        TODO
-    new_flat_params : TODO
-        TODO
-
-    Returns
-    -------
-    TODO
-        TODO
-    """
+    """Update the parameters of a given network."""
     start_idx = 0
     for param in net.parameters():
         end_idx = start_idx + np.prod(list(param.shape))
         param.data = torch.reshape(
-            new_flat_params[start_idx:end_idx], param.shape
-        )
+            new_flat_params[start_idx:end_idx], param.shape)
 
         start_idx = end_idx
 
 
 def conjugate_gradient(Av_func, b, max_iter=10, residual_tol=1e-10):
-    """TODO.
-
-    Parameters
-    ----------
-    Av_func : TODO
-        TODO
-    b : TODO
-        TODO
-    max_iter : TODO
-        TODO
-    residual_tol : TODO
-        TODO
-
-    Returns
-    -------
-    TODO
-        TODO
-    """
+    """Compute the conjugate gradient."""
     x = torch.zeros_like(b)
     r = b - Av_func(x)
     p = r
@@ -107,36 +52,7 @@ def conjugate_gradient(Av_func, b, max_iter=10, residual_tol=1e-10):
 
 def rescale_and_linesearch(g, s, Hs, max_kl, L, kld, old_params, pi,
                            max_iter=10, success_ratio=0.1):
-    """TODO.
-
-    Parameters
-    ----------
-    g : TODO
-        TODO
-    s : TODO
-        TODO
-    Hs : TODO
-        TODO
-    max_kl : TODO
-        TODO
-    L : TODO
-        TODO
-    kld : TODO
-        TODO
-    old_params : TODO
-        TODO
-    pi : TODO
-        TODO
-    max_iter : TODO
-        TODO
-    success_ratio : TODO
-        TODO
-
-    Returns
-    -------
-    TODO
-        TODO
-    """
+    """TODO."""
     set_params(pi, old_params)
     L_old = L().detach()
 
