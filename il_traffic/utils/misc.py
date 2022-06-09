@@ -1,4 +1,6 @@
 """Miscellaneous utility methods."""
+import os
+import errno
 
 
 def dict_update(d, u):
@@ -9,3 +11,13 @@ def dict_update(d, u):
         else:
             d[k] = v
     return d
+
+
+def ensure_dir(path):
+    """Ensure that the directory specified exists, and if not, create it."""
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+    return path

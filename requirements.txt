@@ -1,8 +1,5 @@
 ray==0.8.4
-numpy==1.18.4
-tensorflow==1.15.2
-tensorflow-probability==0.8.0
-gym==0.14.0
+numpy==1.21.6
 matplotlib
 pandas
 scipy

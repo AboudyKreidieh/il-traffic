@@ -67,7 +67,7 @@ class IntelligentDriverModel(ExpertModel):
         self.delta = delta
         self.s0 = s0
 
-    def get_action(self, speed, headway, lead_speed):
+    def get_action(self, speed, headway, lead_speed, **kwargs):
         """See parent class."""
         # in order to deal with ZeroDivisionError
         if abs(headway) < 1e-3:

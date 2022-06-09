@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import os
 import random
-import tensorflow as tf
+import torch
 from copy import deepcopy
 
 import il_traffic.config as config
@@ -11,8 +11,8 @@ from il_traffic.experts import IntelligentDriverModel
 from il_traffic.utils.flow_utils import create_env
 
 
-class TestControllerEnv(unittest.TestCase):
-    """Tests for the ControllerEnv object."""
+class TestFlowEnv(unittest.TestCase):
+    """Tests for the FlowEnv object."""
 
     def setUp(self):
         self.highway_net_params = {
@@ -24,12 +24,8 @@ class TestControllerEnv(unittest.TestCase):
             "controller_cls": IntelligentDriverModel,
             "controller_params": {"a": 1.3, "b": 2.0, "noise": 0.2},
             "control_range": [500, 2300],
-            "max_accel": 1,
-            "max_decel": 1,
             "obs_frames": 5,
             "frame_skip": 5,
-            "avg_speed": False,
-            "full_history": 5,
             "warmup_path": None,
             "rl_penetration": 0.05,
             "save_video": False,
@@ -79,7 +75,7 @@ class TestControllerEnv(unittest.TestCase):
         # Setup the seed value.
         random.seed(1)
         np.random.seed(1)
-        tf.compat.v1.set_random_seed(1)
+        torch.manual_seed(1)
 
         env_params = deepcopy(self.highway_env_params)
         env_params["warmup_path"] = os.path.join(
@@ -133,7 +129,7 @@ class TestControllerEnv(unittest.TestCase):
         # Setup the seed value.
         random.seed(1)
         np.random.seed(1)
-        tf.compat.v1.set_random_seed(1)
+        torch.manual_seed(1)
 
         env_params = deepcopy(self.highway_env_params)
         env_params["warmup_path"] = os.path.join(
@@ -223,7 +219,7 @@ class TestControllerEnv(unittest.TestCase):
         # Setup the seed value.
         random.seed(1)
         np.random.seed(1)
-        tf.compat.v1.set_random_seed(1)
+        torch.manual_seed(1)
 
         env_params = deepcopy(self.highway_env_params)
         env_params["warmup_path"] = os.path.join(

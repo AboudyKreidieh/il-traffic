@@ -2,10 +2,10 @@
 import unittest
 
 from il_traffic.experts import IntelligentDriverModel
-from il_traffic.experts import FollowerStopper
+from il_traffic.experts import DownstreamController
 from il_traffic.experts import PISaturation
-from il_traffic.experts import TimeHeadwayFollowerStopper
-from il_traffic.experts import VelocityController
+from il_traffic.experts.fs import TimeHeadwayFollowerStopper
+from il_traffic.experts.fs import VelocityController
 
 
 class TestIntelligentDriverModel(unittest.TestCase):
@@ -91,65 +91,14 @@ class TestVelocityController(unittest.TestCase):
             model._get_accel_from_v_des(speed=5, v_des=5.0), 0.0)
 
 
-class TestFollowerStopper(unittest.TestCase):
-    """Tests for the FollowerStopper object."""
+class TestDownstreamController(unittest.TestCase):
 
-    def test_init(self):
-        """Validate the functionality of the __init__ method."""
-        # Create the model.
-        model = FollowerStopper(
-            v_des=5.0,
-            max_accel=1,
-            max_decel=2,
-            noise=3,
-            sim_step=4,
-        )
-
-        # Check the attributes.
-        self.assertAlmostEqual(model.v_des, 5.0)
-        self.assertEqual(model.v_cmd, None)
-
-    def test_get_action(self):
-        """Validate the functionality of the get_action method."""
-        # Create the model.
-        model = FollowerStopper(
-            v_des=5.,
-            max_accel=1.,
-            max_decel=1.,
-            noise=0,
-            sim_step=0.4,
-        )
-
-        # Test once.
-        self.assertAlmostEqual(
-            model.get_action(speed=4, headway=10, lead_speed=5),
-            1.0)
-        self.assertAlmostEqual(model.v_cmd, 5.016)
-
-        # Test twice.
-        self.assertAlmostEqual(
-            model.get_action(speed=4, headway=10, lead_speed=0),
-            -1.0)
-        self.assertAlmostEqual(model.v_cmd, 0.0)
+    pass  # TODO
 
 
 class TestPISaturation(unittest.TestCase):
     """Tests for the PISaturation object."""
 
-    def test_init(self):
-        """Validate the functionality of the __init__ method."""
-        # Create the model.
-        model = PISaturation(
-            max_accel=1,
-            max_decel=2,
-            noise=3,
-            sim_step=4,
-            meta_period=5,
-        )
-
-        # Check the attributes.
-        self.assertAlmostEqual(model.meta_period, 5)
-
     def test_get_action(self):
         """Validate the functionality of the get_action method."""
         # Create the model.
@@ -158,7 +107,6 @@ class TestPISaturation(unittest.TestCase):
             max_decel=1.,
             noise=0,
             sim_step=0.4,
-            meta_period=1,
         )
 
         # Test once.

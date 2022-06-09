@@ -4,16 +4,11 @@
     "date/time": "2021-06-06-14:54:13",
     "env_name": "highway",
     "env_params": {
-        "avg_speed": false,
         "frame_skip": 5,
-        "full_history": false,
         "obs_frames": 5
     },
     "expert": 1,
-    "initial_episodes": 1,
-    "model_cls": "FeedForwardModel",
     "model_params": {
-        "batch_norm": false,
         "dropout": false,
         "l2_penalty": 0,
         "layers": [
@@ -22,14 +17,11 @@
             32
         ],
         "learning_rate": 0.001,
-        "num_ensembles": 1,
         "stochastic": false
     },
-    "num_envs": 1,
     "num_iterations": 1,
     "num_rollouts": 1,
     "num_train_steps": 1000,
-    "prob_add": 1.0,
     "render": false,
     "seed": 1
 }

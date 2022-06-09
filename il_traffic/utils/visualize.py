@@ -22,7 +22,7 @@ EXTRA_LANE_EDGES = [
 ]
 
 
-def process_emission(emission_path, verbose):
+def process_emission(emission_path):
     """Process the generated emission file.
 
     This method performs two operations:
@@ -34,12 +34,7 @@ def process_emission(emission_path, verbose):
     ----------
     emission_path : str
         the path to the folder containing the emission file
-    verbose : bool
-        whether to comment of operations running
     """
-    if verbose:
-        print("Renaming emission file.")
-
     # Get the name of the emission file.
     csv_file = [x for x in os.listdir(emission_path) if x.endswith("csv")][0]
     original_fp = os.path.join(emission_path, csv_file)
@@ -47,9 +42,6 @@ def process_emission(emission_path, verbose):
     # Rename it to "emission.csv".
     new_fp = os.path.join(emission_path, "emission.csv")
     os.rename(original_fp, new_fp)
-
-    if verbose:
-        print("Shrinking emission file.")
 
     # Reduce to 3-decimal points.
     df = pd.read_csv(new_fp)

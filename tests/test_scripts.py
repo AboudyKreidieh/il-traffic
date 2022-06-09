@@ -37,7 +37,6 @@ class TestSimulate(unittest.TestCase):
             'render': False,
             'save_video': False,
             'use_warmup': False,
-            'verbose': False,
         }
         self.assertDictEqual(vars(args), expected_args)
 
@@ -48,7 +47,6 @@ class TestSimulate(unittest.TestCase):
             "--end_speed", "5",
             "--penetration_rate", "6",
             "--controller_type", "7",
-            "--verbose",
             "--render",
             "--gen_emission",
             "--noise", "8",
@@ -61,7 +59,6 @@ class TestSimulate(unittest.TestCase):
             "end_speed": 5,
             "penetration_rate": 6,
             "controller_type": 7,
-            "verbose": True,
             "render": True,
             "gen_emission": True,
             "use_warmup": True,
@@ -88,22 +85,22 @@ class TestSimulate(unittest.TestCase):
 
         # test case 1
         self.assertTrue(os.path.exists(
-            "expert_data/highway/FollowerStopper/2000-5/emission.csv"))
+            "expert_data/highway/DownstreamController/2000-5/emission.csv"))
 
         # test case 2
         self.assertTrue(os.path.exists(
-            "expert_data/highway/FollowerStopper/2000-5/mpg.csv"))
+            "expert_data/highway/DownstreamController/2000-5/mpg.csv"))
         self.assertTrue(os.path.exists(
-            "expert_data/highway/FollowerStopper/2000-5/mpg.png"))
+            "expert_data/highway/DownstreamController/2000-5/mpg.png"))
         self.assertTrue(os.path.exists(
-            "expert_data/highway/FollowerStopper/2000-5/ts-0.png"))
+            "expert_data/highway/DownstreamController/2000-5/ts-0.png"))
         self.assertTrue(os.path.exists(
-            "expert_data/highway/FollowerStopper/2000-5/avg-speed.png"))
+            "expert_data/highway/DownstreamController/2000-5/avg-speed.png"))
         self.assertTrue(os.path.exists(
-            "expert_data/highway/FollowerStopper/2000-5/tt.json"))
+            "expert_data/highway/DownstreamController/2000-5/tt.json"))
 
         # Delete all files.
-        if len(os.listdir("expert_data/highway/FollowerStopper")) == 1:
+        if len(os.listdir("expert_data/highway/DownstreamController")) == 1:
             shutil.rmtree("expert_data")
 
 
@@ -124,27 +121,19 @@ class TestImitate(unittest.TestCase):
             'n_training': 1,
             'env_name': 'i210',
             'expert': 1,
-            'num_envs': 1,
-            'render': False,
             'batch_size': 128,
             'buffer_size': 2000000,
-            'prob_add': 1.0,
             'num_rollouts': 10,
             'num_train_steps': 1000,
             'num_iterations': 200,
-            'initial_episodes': 20,
             'seed': 1,
             'env_params:obs_frames': 5,
             'env_params:frame_skip': 5,
-            'env_params:full_history': False,
-            'env_params:avg_speed': False,
             'model_params:layers': [32, 32, 32],
             'model_params:learning_rate': 0.001,
-            'model_params:batch_norm': False,
             'model_params:dropout': False,
             'model_params:l2_penalty': 0,
             'model_params:stochastic': False,
-            'model_params:num_ensembles': 1,
         }
         self.assertDictEqual(vars(args), expected_args)
 
@@ -153,53 +142,38 @@ class TestImitate(unittest.TestCase):
             '--n_training', '1',
             '--env_name', '2',
             '--expert', '3',
-            '--num_envs', '4',
-            '--render',
             '--batch_size', '5',
             '--buffer_size', '6',
-            '--prob_add', '7',
             '--num_rollouts', '8',
             '--num_train_steps', '9',
             '--num_iterations', '10',
-            '--initial_episodes', '11',
             '--seed', '12',
             '--env_params:obs_frames', '13',
             '--env_params:frame_skip', '14',
-            '--env_params:full_history',
             '--env_params:avg_speed',
             '--model_params:layers', '15', '16', '17',
             '--model_params:learning_rate', '18',
-            '--model_params:batch_norm',
             '--model_params:dropout',
             '--model_params:l2_penalty', '19',
             '--model_params:stochastic',
-            '--model_params:num_ensembles', '20',
         ])
         expected_args = {
             'n_training': 1,
             'env_name': '2',
             'expert': 3,
-            'num_envs': 4,
-            'render': True,
             'batch_size': 5,
             'buffer_size': 6,
-            'prob_add': 7,
             'num_rollouts': 8,
             'num_train_steps': 9,
             'num_iterations': 10,
-            'initial_episodes': 11,
             'seed': 12,
             'env_params:obs_frames': 13,
             'env_params:frame_skip': 14,
-            'env_params:full_history': True,
-            'env_params:avg_speed': True,
             'model_params:layers': [15, 16, 17],
             'model_params:learning_rate': 18,
-            'model_params:batch_norm': True,
             'model_params:dropout': True,
             'model_params:l2_penalty': 19,
             'model_params:stochastic': True,
-            'model_params:num_ensembles': 20,
         }
         self.assertDictEqual(vars(args), expected_args)
 
@@ -209,30 +183,23 @@ class TestImitate(unittest.TestCase):
         expected_hp = {
             'env_name': 'i210',
             'expert': 1,
-            'num_envs': 1,
             'render': False,
             'batch_size': 128,
             'buffer_size': 2000000,
-            'prob_add': 1.0,
             'num_rollouts': 10,
             'num_train_steps': 1000,
             'num_iterations': 200,
-            'initial_episodes': 20,
             'seed': 1000,
             'env_params': {
                 'obs_frames': 5,
                 'frame_skip': 5,
-                'full_history': False,
-                'avg_speed': False
             },
             'model_params': {
                 'layers': [32, 32, 32],
                 'learning_rate': 0.001,
-                'batch_norm': False,
                 'dropout': False,
                 'l2_penalty': 0,
                 'stochastic': False,
-                'num_ensembles': 1
             }
         }
         self.assertDictEqual(hp, expected_hp)
@@ -244,7 +211,6 @@ class TestImitate(unittest.TestCase):
 
         # Run the main method.
         imitate(["--env_name", "highway",
-                 "--initial_episodes", "1",
                  "--num_iterations", "1",
                  "--num_rollouts", "1"])
 

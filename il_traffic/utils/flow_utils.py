@@ -21,106 +21,36 @@ from flow.energy_models.poly_fit_autonomie import PFMMidsizeSedan
 from flow.energy_models.poly_fit_autonomie import PFM2019RAV4
 
 import il_traffic.config as config
-from il_traffic.environments.flow_env import ControllerEnv
+from il_traffic.environments.flow_env import FlowEnv
 from il_traffic.experts import IntelligentDriverModel
-from il_traffic.experts import FollowerStopper
+from il_traffic.experts import DownstreamController
 from il_traffic.experts import PISaturation
-from il_traffic.experts import TimeHeadwayFollowerStopper
 
 
-def get_emission_path(controller_type, network_type, network_params):
-    """Assign a path for the emission data.
+def get_base_env_params(network_type, controller_type, save_video, noise):
+    """Return the environment-specific parameters for the non-RL case.
 
-    Parameters
-    ----------
-    controller_type : int
-        the controller used for the AVs in the simulation
-    network_type : str
-        the type of network employed
-    network_params : dict
-        dictionary of network-specific parameters
-
-    Returns
-    -------
-    str
-        the path to the emission directory.
-    """
-    # Specify the emission path, based on the name of the network/controller.
-    if controller_type == 0:
-        controller_name = "IDM"
-    elif controller_type == 1:
-        controller_name = "FollowerStopper"
-    elif controller_type == 2:
-        controller_name = "PISaturation"
-    elif controller_type == 3:
-        controller_name = "TimeHeadwayFollowerStopper"
-    else:
-        controller_name = None  # not applicable
-
-    inflow = network_params["inflow"]
-    end_speed = network_params["end_speed"]
-    emission_path = "./expert_data/{}/{}/{}-{}".format(
-        network_type, controller_name, int(inflow), int(end_speed))
-
-    return emission_path
-
-
-def get_network_params(inflow, end_speed, penetration_rate):
-    """Return the network parameters from the argument parser.
-
-    Parameters
-    ----------
-    inflow : float
-        the inflow rate of vehicles (human and automated)
-    end_speed : float
-        the maximum speed at the downstream boundary edge
-    penetration_rate : float
-        penetration rate of the AVs. 0.10 corresponds to 10%
-
-    Returns
-    -------
-    dict
-        network-specific parameters based on choice of network
-    """
-    return {
-        "inflow": inflow,
-        "end_speed": end_speed,
-        "penetration_rate": penetration_rate,
-    }
-
-
-def get_expert_params(network_type,
-                      controller_type,
-                      network_params,
-                      noise,
-                      verbose):
-    """Get the controller parameters and control range for a given expert.
+    These are used to specify the controller used by the AVs.
 
     Parameters
     ----------
     network_type : str
         the type of network to simulate. Must be one of {"highway", "i210"}.
-    network_params : dict
-        dictionary of network-specific parameters
     controller_type : int
         the type of controller, must be one of:
           (0) -- Intelligent Driver Model
-          (1) -- FollowerStopper
+          (1) -- DownstreamController
           (2) -- PISaturation
-          (3) -- TimeHeadwayFollowerStopper
+    save_video : bool
+        whether to save the frames of the GUI. These can be processed and
+        coupled together later to generate a video of the simulation.
     noise : float
         the standard deviation of noise assigned to accelerations by the AVs.
-    verbose : bool
-        whether to print relevant logging data
 
     Returns
     -------
-    type [ il_traffic.core.experts.ExpertModel ]
-        the expert model class. Used to create the model itself.
     dict
-        dictionary of controller input parameters
-    [float, float] or None
-        the control range. If set to None, all regions are controllable.
+        environment-specific parameters
     """
     # Specify the control range based on the choice of network.
     if network_type == "highway":
@@ -130,118 +60,16 @@ def get_expert_params(network_type,
     else:
         control_range = None  # unknown network type
 
-    # Add the noise term to all controllers.
-    controller_params = {"noise": noise}
-
-    # Initialize controller params with some data in case you are using the
-    # velocity controllers.
-    if controller_type > 0:
-        controller_params.update({
-            "meta_period": 10,
-            "max_accel": 1,
-            "max_decel": 1,
-            "sim_step": 0.4,
-        })
-
+    # Specify the type of controller and some of its default parameters.
     if controller_type == 0:
-        # Use the IDM.
         controller_cls = IntelligentDriverModel
-
-        # Add controller-specific parameters.
-        controller_params.update({"a": 1.3, "b": 2.0})
-
-        if verbose:
-            print("Running Intelligent Driver Model.")
-
-    elif controller_type == 1:
-        # Use the FollowerStopper.
-        controller_cls = FollowerStopper
-
-        # This term is not needed.
-        del controller_params["meta_period"]
-
-        # Compute the FollowerStopper desired speed.
-        v_des = network_params["end_speed"]
-
-        # Add controller-specific parameters.
-        controller_params.update({"v_des": v_des})
-
-        if verbose:
-            print("Running FollowerStopper with v_des: {}.".format(v_des))
-
-    elif controller_type == 2:
-        # Use the PISaturation controller.
-        controller_cls = PISaturation
-
-        if verbose:
-            print("Running PISaturation.")
-
-    elif controller_type == 3:
-        # Use the FollowerStopper.
-        controller_cls = TimeHeadwayFollowerStopper
-
-        # This term is not needed.
-        del controller_params["meta_period"]
-
-        # Compute the FollowerStopper desired speed.
-        v_des = network_params["end_speed"]
-
-        # Add controller-specific parameters.
-        controller_params.update({"v_des": v_des})
-
-        if verbose:
-            print("Running TimeHeadwayFollowerStopper with v_des: {}.".format(
-                v_des))
-
+        controller_params = {"a": 1.3, "b": 2.0, "noise": noise}
+    elif controller_type in [1, 2]:
+        controller_cls = \
+            DownstreamController if controller_type == 1 else PISaturation
+        controller_params = {"sim_step": 0.4}
     else:
         raise ValueError("Unknown controller type: {}".format(controller_type))
-
-    return controller_cls, controller_params, control_range
-
-
-def get_base_env_params(network_type,
-                        network_params,
-                        controller_type,
-                        save_video,
-                        noise,
-                        verbose):
-    """Return the environment-specific parameters for the non-RL case.
-
-    These are used to specify the controller used by the AVs.
-
-    Parameters
-    ----------
-    network_type : str
-        the type of network to simulate. Must be one of {"highway", "i210"}.
-    network_params : dict
-        dictionary of network-specific parameters
-    controller_type : int
-        the type of controller, must be one of:
-          (0) -- Intelligent Driver Model
-          (1) -- FollowerStopper
-          (2) -- PISaturation
-          (3) -- TimeHeadwayFollowerStopper
-    save_video : bool
-        whether to save the frames of the GUI. These can be processed and
-        coupled together later to generate a video of the simulation.
-    noise : float
-        the standard deviation of noise assigned to accelerations by the AVs.
-    verbose : bool
-        whether to print relevant logging data
-
-    Returns
-    -------
-    dict
-        environment-specific parameters
-    """
-    # Get the controller parameters and control range.
-    controller_cls, controller_params, control_range = get_expert_params(
-        network_type=network_type,
-        controller_type=controller_type,
-        network_params=network_params,
-        noise=noise,
-        verbose=verbose,
-    )
 
     return dict(
         # the controller to use
@@ -251,52 +79,15 @@ def get_base_env_params(network_type,
         # the interval (in meters) in which automated vehicles are controlled.
         # If set to None, the entire region is controllable.
         control_range=control_range,
-        # maximum allowed acceleration for the AV accelerations, in m/s^2
-        max_accel=1,
-        # maximum allowed deceleration for the AV accelerations, in m/s^2
-        max_decel=1,
         # number of observation frames to use. Additional frames are provided
         # from previous time steps.
         obs_frames=5,
         # frames to ignore in between each delta observation
         frame_skip=5,
-        # whether to use all observations from previous steps. If set to False,
-        # only the past speed is used.
-        full_history=False,
-        # whether to include the average speed of the leader vehicle in the
-        # observation
-        avg_speed=False,
         # whether to save the frames of the GUI. These can be processed and
         # coupled together later to generate a video of the simulation.
         save_video=save_video,
     )
-
-
-def get_rl_env_params(env_name):
-    """Assign environment parameters based on the choice of environment.
-
-    Parameters
-    ----------
-    env_name : str
-        the name of the environment
-
-    Returns
-    -------
-    dict
-        addition environment parameters to provide to the environment
-    """
-    # Run assertion.
-    assert env_name in [
-        "highway", "i210"], "Unknown environment: {}".format(env_name)
-
-    # Compute the additional dictionary parameters.
-    env_params = {
-        "warmup_path": os.path.join(
-            config.PROJECT_PATH, "warmup/{}".format(env_name)),
-        'rl_penetration': 0.05,
-    }
-
-    return env_params
 
 
 def get_flow_params(network_type,
@@ -306,7 +97,7 @@ def get_flow_params(network_type,
                     emission_path,
                     use_warmup=False,
                     training=False):
-    """Return the flow-specific parameters when running ControllerEnv.
+    """Return the flow-specific parameters when running FlowEnv.
 
     Parameters
     ----------
@@ -497,7 +288,7 @@ def get_flow_params(network_type,
         exp_tag=network_type,
 
         # name of the flow environment the experiment is running on
-        env_name=ControllerEnv,
+        env_name=FlowEnv,
 
         # name of the network class the experiment is running on
         network=network_cls,

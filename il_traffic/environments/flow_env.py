@@ -12,8 +12,8 @@ from flow.networks import I210SubNetwork
 from flow.core.params import InFlows
 from flow.core.util import ensure_dir
 
-from il_traffic.experts import FlowExpertModel
 from il_traffic.experts import IntelligentDriverModel
+from il_traffic.experts.flow_expert import FlowExpertModel
 
 ADDITIONAL_ENV_PARAMS = dict(
     # the controller to use
@@ -23,21 +23,11 @@ ADDITIONAL_ENV_PARAMS = dict(
     # the interval (in meters) in which automated vehicles are controlled. If
     # set to None, the entire region is controllable.
     control_range=[500, 2500],
-    # maximum allowed acceleration for the AV accelerations, in m/s^2
-    max_accel=1,
-    # maximum allowed deceleration for the AV accelerations, in m/s^2
-    max_decel=1,
     # number of observation frames to use. Additional frames are provided from
     # previous time steps.
     obs_frames=5,
     # frames to ignore in between each delta observation
     frame_skip=5,
-    # whether to use all observations from previous steps. If set to False,
-    # only the past speed is used.
-    full_history=False,
-    # whether to include the average speed of the leader vehicle in the
-    # observation
-    avg_speed=False,
     # whether to save the frames of the GUI. These can be processed and coupled
     # together later to generate a video of the simulation.
     save_video=False,
@@ -64,12 +54,12 @@ EXTRA_LANE_EDGES = [
 ]
 
 # scaling term for the speeds
-SPEED_SCALE = 1/10
+SPEED_SCALE = 0.1
 # scaling term for the headways
-HEADWAY_SCALE = 1/100
+HEADWAY_SCALE = 0.01
 
 
-class ControllerEnv(Env):
+class FlowEnv(Env):
     """Environment for simulating a controller on a variety of networks.
 
     With this class, custom vehicle controllers can be assigned to vehicles
@@ -81,8 +71,6 @@ class ControllerEnv(Env):
     * controller_params: dictionary of controller params
     * control_range: the interval (in meters) in which automated vehicles are
       controlled. If set to None, the entire region is controllable.
-    * max_accel: maximum allowed acceleration for the AV accelerations, in m/s2
-    * max_decel: maximum allowed deceleration for the AV accelerations, in m/s2
     * obs_frames: number of observation frames to use. Additional frames are
       provided from previous time steps.
     * save_video: whether to save the frames of the gui. These can be
@@ -103,7 +91,7 @@ class ControllerEnv(Env):
                  network=None,
                  simulator='traci'):
         """Initialize the environment class."""
-        super(ControllerEnv, self).__init__(
+        super(FlowEnv, self).__init__(
             env_params=env_params,
             sim_params=sim_params,
             network=network,
@@ -147,7 +135,7 @@ class ControllerEnv(Env):
                 "In order to save videos, please include the flag: " \
                 "--gen_emission"
 
-            # Create the screenshots folder.
+            # Create the "screenshots" folder.
             ensure_dir(os.path.join(sim_params.emission_path, "screenshots"))
 
         # =================================================================== #
@@ -260,9 +248,8 @@ class ControllerEnv(Env):
 
             # Assign the observed vehicles.
             if self._controller_cls.__name__ in [
-                    "FollowerStopper",
+                    "DownstreamController",
                     "PISaturation",
-                    "TimeHeadwayFollowerStopper",
                     "IntelligentDriverModel"]:
                 # vehicle in front
                 self.k.vehicle.set_observed(self.k.vehicle.get_leader(veh_id))
@@ -384,39 +371,15 @@ class ControllerEnv(Env):
             obs_vehicle = np.array(
                 [0. for _ in range(self.observation_space.shape[0])])
 
-            if self.env_params.additional_params["full_history"]:
-                # Concatenate the past n samples for a given time delta in the
-                # output observations.
-                obs_from_history = np.concatenate(
-                    self._obs_history[veh_id][::-skip])
+            # Add the most recent observation.
+            obs_vehicle[:3] = self._obs_history[veh_id][-1]
 
-                # Scale values by current step information.
-                if self.env_params.additional_params["obs_frames"] > 1:
-                    for i in range(1, int(len(obs_from_history) / 3)):
-                        obs_from_history[3 * i] = \
-                            obs_from_history[3 * i] - obs_from_history[0]
-                        obs_from_history[3 * i + 1] = \
-                            obs_from_history[3 * i + 1] - obs_from_history[1]
-                        obs_from_history[3 * i + 2] = \
-                            obs_from_history[3 * i + 2] - obs_from_history[0]
-                    obs_from_history[2] = \
-                        obs_from_history[2] - obs_from_history[0]
-
-                obs_vehicle[:len(obs_from_history)] = obs_from_history
-            else:
-                # Add the most recent observation.
-                obs_vehicle[:3] = self._obs_history[veh_id][-1]
-
-                # Add the lead speed observations for the frame skips.
-                for i in range(1, frames):
-                    if skip * i + 1 > len(self._obs_history[veh_id]):
-                        break
-                    obs_vehicle[2 + i] = \
-                        self._obs_history[veh_id][-(skip * i + 1)][-1]
-
-            # Add the average speed of the leader.
-            if self.env_params.additional_params["avg_speed"]:
-                obs_vehicle[-1] = np.mean(self._leader_speed[veh_id])
+            # Add the lead speed observations for the frame skips.
+            for i in range(1, frames):
+                if skip * i + 1 > len(self._obs_history[veh_id]):
+                    break
+                obs_vehicle[2 + i] = \
+                    self._obs_history[veh_id][-(skip * i + 1)][-1]
 
             # Add new observation.
             obs.append(obs_vehicle)
@@ -441,9 +404,10 @@ class ControllerEnv(Env):
     @property
     def action_space(self):
         """Return the action space."""
+        # accelerations between -1 and +1
         return gym.spaces.Box(
-            low=-abs(self.env_params.additional_params["max_decel"]),
-            high=self.env_params.additional_params["max_accel"],
+            low=-1.,
+            high=1.,
             shape=(1,),
             dtype=np.float32,
         )
@@ -451,16 +415,8 @@ class ControllerEnv(Env):
     @property
     def observation_space(self):
         """Return the observation space."""
-        if self.env_params.additional_params["full_history"]:
-            # observation size times number of steps observed
-            num_obs = 3 * self.env_params.additional_params["obs_frames"]
-        else:
-            # current observation and past speeds
-            num_obs = 2 + self.env_params.additional_params["obs_frames"]
-
-        # Add an additional element for the leader speed history.
-        if self.env_params.additional_params["avg_speed"]:
-            num_obs += 1
+        # current observation and past speeds
+        num_obs = 2 + self.env_params.additional_params["obs_frames"]
 
         return gym.spaces.Box(
             low=-float("inf"),
@@ -471,7 +427,7 @@ class ControllerEnv(Env):
 
     def step(self, rl_actions):
         """See parent class."""
-        obs, rew, done, _ = super(ControllerEnv, self).step(rl_actions)
+        obs, rew, done, _ = super(FlowEnv, self).step(rl_actions)
         info = {}
 
         # Save the screenshot.
@@ -533,10 +489,10 @@ class ControllerEnv(Env):
         if self.env_params.additional_params.get("warmup_path"):
             return self._reset_highway_i210()
 
-        # Initialize with a define (fixed) initial condition if the
-        # load_state variable is defined.
+        # Initialize with a predefined initial condition if the load_state
+        # variable is defined.
         elif self.sim_params.load_state is not None:
-            _ = super(ControllerEnv, self).reset()
+            _ = super(FlowEnv, self).reset()
 
             self._add_automated_vehicles()
 
@@ -548,7 +504,7 @@ class ControllerEnv(Env):
 
             return np.copy(obs)
 
-        return super(ControllerEnv, self).reset()
+        return super(FlowEnv, self).reset()
 
     def _reset_highway_i210(self):
         """Perform highway/I-210 specific reset operations.
@@ -616,15 +572,7 @@ class ControllerEnv(Env):
             )
             self.net_params = new_net_params
 
-            # If the expert is a FollowerStopper, update the desired speed
-            # to match the free-flow speed of the new density.
-            if self._controller_cls.__name__ in [
-                    "FollowerStopper", "TimeHeadwayFollowerStopper"]:
-                self._av_controller.expert.v_des = end_speed
-                for veh_id in self.av_controllers_dict.keys():
-                    self.av_controllers_dict[veh_id].expert.v_des = end_speed
-
-        _ = super(ControllerEnv, self).reset()
+        _ = super(FlowEnv, self).reset()
 
         # Add automated vehicles.
         if self._warmup_paths is not None:
@@ -808,7 +756,7 @@ class ControllerEnv(Env):
         obs = [None for _ in range(3)]
 
         # Add the speed of the ego vehicle.
-        obs[0] = self.k.vehicle.get_speed(veh_id, error=10.) * SPEED_SCALE
+        obs[0] = self.k.vehicle.get_speed(veh_id, error=10) * SPEED_SCALE
 
         # Add the speed and bumper-to-bumper headway of leading vehicles.
         leader = self.k.vehicle.get_leader(veh_id)
@@ -817,9 +765,8 @@ class ControllerEnv(Env):
             lead_speed = 10.
             lead_head = 100.
         else:
-            lead_speed = self.k.vehicle.get_speed(leader, error=10.)
-            lead_head = min(
-                self.k.vehicle.get_headway(veh_id, error=100.), 100.)
+            lead_speed = self.k.vehicle.get_speed(leader, error=10)
+            lead_head = min(self.k.vehicle.get_headway(veh_id, error=100), 100)
 
         obs[1] = lead_speed * SPEED_SCALE
         obs[2] = lead_head * HEADWAY_SCALE

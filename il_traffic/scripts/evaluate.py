@@ -1,20 +1,17 @@
 """Evaluate the performance of a trained model."""
-import tensorflow as tf
 import argparse
 import os
 import json
 import sys
-
-from flow.core.util import ensure_dir
+import torch
 
 from il_traffic.models.fcnet import FeedForwardModel
 from il_traffic.scripts.simulate import HIGHWAY_PARAMS
 from il_traffic.scripts.simulate import rollout
 from il_traffic.scripts.simulate import plot_results
-from il_traffic.utils.tf_util import make_session
-from il_traffic.utils.flow_utils import get_network_params
 from il_traffic.utils.flow_utils import get_base_env_params
 from il_traffic.utils.flow_utils import create_env
+from il_traffic.utils.misc import ensure_dir
 
 
 def parse_args(args):
@@ -100,45 +97,35 @@ def create_custom_expert(env, model_path, ckpt_num=None):
     function
         the functional form of the policy
     """
-    # Create the tensorflow graph and session.
-    graph = tf.Graph()
-    with graph.as_default():
-        sess = make_session(num_cpu=3, graph=graph)
+    # Create the torch device.
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        # Collect the model parameters.
-        with open(os.path.join(model_path, "hyperparameters.json"), "r") as f:
-            hyperparameters = json.load(f)
-            model_params = hyperparameters["model_params"]
+    # Collect the model parameters.
+    with open(os.path.join(model_path, "hyperparameters.json"), "r") as f:
+        hyperparameters = json.load(f)
+        model_params = hyperparameters["model_params"]
 
-        # Create the model.
-        model = FeedForwardModel(
-            sess=sess,
-            ob_dim=env.observation_space.shape[0],
-            ac_dim=env.action_space.shape[0],
-            act_fun=tf.nn.relu,
-            **model_params,
-        )
+    # Create the model.
+    model = FeedForwardModel(
+        ob_dim=env.observation_space.shape[0],
+        ac_dim=env.action_space.shape[0],
+        **model_params,
+    )
 
-        with sess.as_default():
-            sess.run(tf.compat.v1.global_variables_initializer())
-        model_params = tf.compat.v1.get_collection(
-            tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES)
-        saver = tf.compat.v1.train.Saver(model_params)
+    # Choose the last checkpoint if a value was not specified. TODO
+    if ckpt_num is None:
+        filenames = os.listdir(os.path.join(model_path, "checkpoints"))
+        metafiles = [f[:-5] for f in filenames if f[-5:] == ".meta"]
+        metanum = [int(f.split("-")[-1]) for f in metafiles]
+        ckpt_num = max(metanum)
 
-        # Choose the last checkpoint if a value was not specified.
-        if ckpt_num is None:
-            filenames = os.listdir(os.path.join(model_path, "checkpoints"))
-            metafiles = [f[:-5] for f in filenames if f[-5:] == ".meta"]
-            metanum = [int(f.split("-")[-1]) for f in metafiles]
-            ckpt_num = max(metanum)
+    # Load the learned model parameters. TODO
+    saver.restore(
+        sess,
+        os.path.join(model_path, "checkpoints/itr-{}".format(ckpt_num)),
+    )
 
-        # Load the learned model parameters.
-        saver.restore(
-            sess,
-            os.path.join(model_path, "checkpoints/itr-{}".format(ckpt_num)),
-        )
-
-    return lambda x: model.get_action(x, env_num=0)
+    return lambda x: model(x)
 
 
 def main(args):
@@ -154,7 +141,7 @@ def main(args):
     network_type = hyperparameters["env_name"]
 
     # Get the network parameters.
-    network_params = get_network_params(
+    network_params = dict(
         inflow=flags.inflow,
         end_speed=flags.end_speed,
         penetration_rate=flags.penetration_rate,
@@ -164,10 +151,8 @@ def main(args):
     # vehicles.
     environment_params = get_base_env_params(
         network_type=network_type,
-        network_params=network_params,
         controller_type=0,
         noise=0,
-        verbose=False,
         save_video=flags.save_video,
     )
 
@@ -177,8 +162,6 @@ def main(args):
         environment_params["obs_frames"] = env_params["obs_frames"]
     if "frame_skip" in env_params:
         environment_params["frame_skip"] = env_params["frame_skip"]
-    if "full_history" in env_params:
-        environment_params["full_history"] = env_params["full_history"]
     if "avg_speed" in env_params:
         environment_params["avg_speed"] = env_params["avg_speed"]
     if "v_des" in env_params:

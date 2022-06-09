@@ -1,8 +1,8 @@
 """Run the expert policies.
 
-This script tests the performance of the Intelligent Driver Model and variants
-of the FollowerStopper on the highway and I-210 networks, and collects expert
-trajectory data for later use.
+This script tests the performance of the Intelligent Driver Model and variance
+expert wave-smoothing controllers on simulations of single and multi-lane
+highways, and collects expert trajectory data for later use.
 
 Usage
     python simulate.py --network_type "i210" --controller_type 1
@@ -16,10 +16,8 @@ from copy import deepcopy
 
 from flow.core.util import ensure_dir
 
-from il_traffic.utils.flow_utils import get_network_params
 from il_traffic.utils.flow_utils import get_base_env_params
 from il_traffic.utils.flow_utils import create_env
-from il_traffic.utils.flow_utils import get_emission_path
 from il_traffic.utils.visualize import process_emission
 from il_traffic.utils.visualize import get_global_position
 from il_traffic.utils.visualize import time_space_diagram
@@ -78,19 +76,14 @@ def parse_args(args):
         default=1,
         help='the type of controller, must be one of: '
              '0) Intelligent Driver Model, '
-             '1) FollowerStopper, '
-             '2) PISaturation, '
-             '3) TimeHeadwayFollowerStopper.')
+             '1) DownstreamController, '
+             '2) PISaturation.')
     parser.add_argument(
         '--noise',
         type=float,
         default=0.0,
         help='the standard deviation of noise assigned to accelerations by '
              'the AVs.')
-    parser.add_argument(
-        '--verbose',
-        action='store_true',
-        help='whether to print relevant logging data')
     parser.add_argument(
         '--render',
         action='store_true',
@@ -115,12 +108,47 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
+def get_emission_path(controller_type, network_type, network_params):
+    """Assign a path for the emission data.
+
+    Parameters
+    ----------
+    controller_type : int
+        the controller used for the AVs in the simulation
+    network_type : str
+        the type of network employed
+    network_params : dict
+        dictionary of network-specific parameters
+
+    Returns
+    -------
+    str
+        the path to the emission directory.
+    """
+    # Specify the emission path, based on the name of the network/controller.
+    if controller_type == 0:
+        controller_name = "IDM"
+    elif controller_type == 1:
+        controller_name = "DownstreamController"
+    elif controller_type == 2:
+        controller_name = "PISaturation"
+    else:
+        controller_name = None  # not applicable
+
+    inflow = network_params["inflow"]
+    end_speed = network_params["end_speed"]
+    emission_path = "./expert_data/{}/{}/{}-{}".format(
+        network_type, controller_name, int(inflow), int(end_speed))
+
+    return emission_path
+
+
 def rollout(env, model, save_path):
     """Run the rollout, and collect expert samples.
 
     Parameters
     ----------
-    env : il_traffic.ControllerEnv
+    env : il_traffic.FlowEnv
         the environment to run
     model : function
         the mapping from states to actions by the vehicles. If the model
@@ -187,7 +215,7 @@ def plot_results(emission_path,
         specifies whether to use a warmup file when initializing a simulation
     """
     # Process the emission file.
-    process_emission(emission_path, verbose=False)
+    process_emission(emission_path)
 
     # Import the emission file (to be used by the following methods).
     df = pd.read_csv(os.path.join(emission_path, "emission.csv"))
@@ -261,7 +289,7 @@ def main(args):
     flags = parse_args(args)
 
     # Get the network parameters.
-    network_params = get_network_params(
+    network_params = dict(
         inflow=flags.inflow,
         end_speed=flags.end_speed,
         penetration_rate=flags.penetration_rate,
@@ -271,10 +299,8 @@ def main(args):
     # vehicles.
     environment_params = get_base_env_params(
         network_type=flags.network_type,
-        network_params=network_params,
         controller_type=flags.controller_type,
         noise=flags.noise,
-        verbose=flags.verbose,
         save_video=flags.save_video,
     )
 

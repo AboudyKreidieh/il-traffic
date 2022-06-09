@@ -24,7 +24,7 @@ class ExpertModel(object):
         """
         self.noise = noise
 
-    def get_action(self, speed, headway, lead_speed):
+    def get_action(self, speed, headway, lead_speed, **kwargs):
         """Return the desired acceleration by the model.
 
         Parameters

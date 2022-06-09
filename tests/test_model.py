@@ -1,9 +1,7 @@
 """Tests for the features in core/model.py."""
 import unittest
-import tensorflow as tf
 
 from il_traffic.models.fcnet import FeedForwardModel
-from il_traffic.utils.tf_util import get_trainable_vars
 
 
 class TestFeedForwardModel(unittest.TestCase):
@@ -11,25 +9,18 @@ class TestFeedForwardModel(unittest.TestCase):
 
     def setUp(self):
         self.model_params = {
-            "sess": tf.compat.v1.Session(),
             "ac_dim": 1,
             "ob_dim": 2,
             "layers": [128, 64, 32],
-            "act_fun": tf.nn.relu,
             "learning_rate": 1e-5,
-            "batch_norm": False,
             "dropout": False,
             "l2_penalty": False,
             "stochastic": False,
-            "num_ensembles": 1,
         }
 
     def tearDown(self):
         self.model_params['sess'].close()
         del self.model_params
-
-        # Clear the graph.
-        tf.compat.v1.reset_default_graph()
 
     def test_init(self):
         """Check the functionality of the __init__() method.
