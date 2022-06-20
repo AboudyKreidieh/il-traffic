@@ -15,7 +15,7 @@ import trajectory.config as t_config
 from trajectory.env.energy_models import PFM2019RAV4
 
 VEHICLE_LENGTH = 5
-NUM_VEHICLES = 101
+NUM_VEHICLES = 76
 AV_PENETRATION = 0.04
 
 
@@ -215,7 +215,7 @@ class NonLocalTrafficFLowHarmonizer(object):
         self._lead_vel = 30.
 
     def reset(self):
-        """TODO."""
+        """Reset internal memory."""
         self.accel = 0.
         self.v_des = 30.
         self._vl.clear()
@@ -244,7 +244,7 @@ class NonLocalTrafficFLowHarmonizer(object):
 
     @staticmethod
     def _uniform(x0, x, z, width):
-        """TODO."""
+        """Perform uniform smoothing across a window of fixed width."""
         # Collect relevant traffic-state info.
         # - ix0: segments in front of the ego vehicle
         # - ix1: final segment, or clipped to estimate congested speeds
@@ -494,8 +494,8 @@ class TrajectoryEnv(gym.Env):
         if AV_PENETRATION == 0 or len(self.v[-1]) == len(self.v[0]):
             self._platoon_ix += 1
 
-            veh_to_add = NUM_VEHICLES if AV_PENETRATION == 0 \
-                else min(NUM_VEHICLES-self._platoon_ix, int(1/AV_PENETRATION)-1)
+            veh_to_add = NUM_VEHICLES if AV_PENETRATION == 0 else min(
+                NUM_VEHICLES - self._platoon_ix, int(1 / AV_PENETRATION) - 1)
 
             for _ in range(veh_to_add):
                 # Increment platoon index.
