@@ -12,11 +12,35 @@ from collections import deque
 from copy import deepcopy
 
 import trajectory.config as t_config
-from trajectory.env.energy_models import PFM2019RAV4
 
 VEHICLE_LENGTH = 5
 NUM_VEHICLES = 76
 AV_PENETRATION = 0.04
+RAV4_2019_COEFFS = {
+    'beta0': 0.013111753095302022,
+    'vc': 5.98,
+    'p1': 0.047436831067050676,
+    'C0': 0.14631964767035743,
+    'C1': 0.012179045946260292,
+    'C2': 0,
+    'C3': 2.7432588728174234e-05,
+    'p0': 0.04553801347643801,
+    'p2': 0.0018022443124799303,
+    'q0': 0,
+    'q1': 0.02609037187916979,
+    'b1': 7.1780386096154185,
+    'b2': 0.053537268955100234,
+    'b3': 0.27965662935753677,
+    'z0': 1.4940081773441736,
+    'z1': 1.2718495543500672,
+    'ver': '2.0',
+    'mass': 1717,
+    'fuel_type': 'gasoline',
+}
+GRAMS_PER_SEC_TO_GALS_PER_HOUR = {
+    'diesel': 1.119,  # 1.119 gal/hr = 1g/s
+    'gasoline': 1.268,  # 1.268 gal/hr = 1g/s
+}
 
 
 def get_trajectory_from_path(fp, dt):
@@ -151,6 +175,48 @@ def get_idm_accel(v, vl, h, dt):
     accel = max(-v/dt, accel)
 
     return accel
+
+
+class PFM2019RAV4(object):
+
+    def __init__(self):
+        coeffs_dict = RAV4_2019_COEFFS
+        self.mass = coeffs_dict['mass']
+        self.state_coeffs = np.array([coeffs_dict['C0'],
+                                      coeffs_dict['C1'],
+                                      coeffs_dict['C2'],
+                                      coeffs_dict['C3'],
+                                      coeffs_dict['p0'],
+                                      coeffs_dict['p1'],
+                                      coeffs_dict['p2'],
+                                      coeffs_dict['q0'],
+                                      coeffs_dict['q1'],
+                                      coeffs_dict['z0'],
+                                      coeffs_dict['z1']])
+        self.beta0 = coeffs_dict['beta0']
+        self.vc = coeffs_dict['vc']
+        self.b1 = coeffs_dict['b1']
+        self.b2 = coeffs_dict['b2']
+        self.b3 = coeffs_dict['b3']
+        self.fuel_type = coeffs_dict['fuel_type']
+
+    def get_instantaneous_fuel_consumption(self, accel, speed, grade):
+        accel_plus = np.clip(accel, a_min=0, a_max=np.inf)
+        state_variables = np.array([1,
+                                    speed,
+                                    speed**2,
+                                    speed**3,
+                                    accel,
+                                    accel * speed,
+                                    accel * speed**2,
+                                    accel_plus ** 2,
+                                    accel_plus ** 2 * speed,
+                                    grade,
+                                    grade * speed])
+        fc = np.dot(self.state_coeffs, state_variables)
+        lower_bound = (speed <= self.vc) * self.beta0
+        fc = np.maximum(fc, lower_bound)
+        return fc * GRAMS_PER_SEC_TO_GALS_PER_HOUR[self.fuel_type]
 
 
 class NonLocalTrafficFLowHarmonizer(object):
