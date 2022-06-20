@@ -12,9 +12,10 @@ from collections import deque
 from copy import deepcopy
 
 import trajectory.config as t_config
+from trajectory.env.energy_models import PFM2019RAV4
 
 VEHICLE_LENGTH = 5
-NUM_VEHICLES = 150
+NUM_VEHICLES = 101
 AV_PENETRATION = 0.04
 
 
@@ -22,10 +23,10 @@ def get_trajectory_from_path(fp, dt):
     df = pd.read_csv(fp)
     v_leader = np.array(df.Velocity / 3.6)
 
-    a_leader = [0.] + list((v_leader[1:] - v_leader[:-1]) / dt)
+    a_leader = list((v_leader[1:] - v_leader[:-1]) / dt)
     v_leader = list(v_leader)
     x_leader = [0.]
-    for t in range(1, len(a_leader)):
+    for t in range(1, len(v_leader)):
         x_leader.append(
             x_leader[t-1] 
             + v_leader[t-1] * dt
@@ -47,7 +48,7 @@ def get_inrix_from_dir(directory):
     # Import times when the traffic state estimate is updated.
     t_seg = sorted(list(pd.read_csv(
         os.path.join(directory, "speed.csv"))["time"]))
-    
+
     return x_seg, v_seg, t_seg
 
 
@@ -183,32 +184,6 @@ class NonLocalTrafficFLowHarmonizer(object):
         #                   lower-level control parameters                    #
         # =================================================================== #
 
-        # whether to use the step response approach. If set to False,
-        # instantaneous accelerations are computed based on the difference in
-        # current and target and smoothed using exponential decay
-        self._use_step_response = False
-
-        # second order response parameters for accelerations
-        tr1 = 1.6  # rising time, in seconds
-        pos1 = 0.05  # percent overshoot
-        zeta = np.sqrt(np.log(pos1) ** 2 / (np.pi ** 2 + np.log(pos1) ** 2))
-        phi = np.arctan2(np.sqrt(1 - zeta ** 2), zeta)
-        omega_n = (np.pi - phi) / (tr1 * np.sqrt(1 - zeta ** 2))
-        self._zeta1 = zeta
-        self._omega_n1 = omega_n
-
-        # second order response parameters for decelerations
-        tr2 = 0.8  # rising time, in seconds
-        pos2 = 0.11  # percent overshoot
-        zeta = np.sqrt(np.log(pos2) ** 2 / (np.pi ** 2 + np.log(pos2) ** 2))
-        phi = np.arctan2(np.sqrt(1 - zeta ** 2), zeta)
-        omega_n = (np.pi - phi) / (tr2 * np.sqrt(1 - zeta ** 2))
-        self._zeta2 = zeta
-        self._omega_n2 = omega_n
-
-        # two most recent accelerations, in m/s^2
-        self._a_tm1 = 0.
-        self._a_tm2 = 0.
         # largest possible acceleration, in m/s^2
         self.max_accel = 1.5
         # largest possible deceleration, in m/s^2
@@ -299,22 +274,6 @@ class NonLocalTrafficFLowHarmonizer(object):
 
     def _get_accel_from_vdes(self, v_t, v_des):
         """Return the desired acceleration."""
-        if self._use_step_response:
-            # Apply step response.
-            if v_des - v_t > -0.25:
-                accel = self._2or(v_t, v_des, self._omega_n1, self._zeta1)
-            elif v_des - v_t <= -0.25:
-                accel = self._2or(v_t, v_des, self._omega_n2, self._zeta2)
-            else:
-                accel = 0.
-        else:
-            # Apply instantaneous smoothed acceleration.
-            accel = self._bounded_accel(v_t=v_t, v_des=v_des)
-
-        return accel
-
-    def _bounded_accel(self, v_t, v_des):
-        """Return a bounded acceleration to instantaneously achieve target."""
         # Compute bounded acceleration.
         accel = max(
             -abs(self.max_decel), min(self.max_accel, (v_des-v_t)/self.dt))
@@ -322,25 +281,10 @@ class NonLocalTrafficFLowHarmonizer(object):
         # Reduce noise.
         accel = self.gamma * accel + (1. - self.gamma) * self.accel
 
+        # Make sure speed is not negative.
+        accel = max(-v_t / self.dt, accel)
+
         return accel
-
-    def _2or(self, v_t, v_des, omega_n, zeta):
-        """Update acceleration based on second order response."""
-        y_tm1 = self._a_tm1
-        y_tm2 = self._a_tm2
-        x = v_des - v_t  # TODO: I think
-        dt = self.dt
-
-        # Compute next acceleration.
-        y_t = 2 * (1 - zeta * omega_n * dt) * y_tm1 \
-            - (1 - 2 * omega_n * dt + (omega_n * dt) ** 2) * y_tm2 \
-            + x
-
-        # Update memory.
-        self._a_tm2 = self._a_tm1
-        self._a_tm1 = y_t
-
-        return y_t
 
     def get_accel(self, v, vl, h, x, x_seg, v_seg):
         # Update the buffer of lead speeds.
@@ -370,14 +314,9 @@ class NonLocalTrafficFLowHarmonizer(object):
                 self.c2 * delta_v
 
             # Update desired speed.
-            max_decel = -1.0
-            max_accel = 1.0
             self.v_des = max(
-                self.v_des + max_decel * self.dt, min(
-                    self.v_des + max_accel * self.dt,
-                    v_target,
-                )
-            )
+                v-abs(self.max_decel)*self.dt,
+                min(v+self.max_accel*self.dt, v_target))
 
         # Predict the average future acceleration for the leader.
         if len(self._vl) > 1:
@@ -397,6 +336,9 @@ class NonLocalTrafficFLowHarmonizer(object):
              - 0.5 * v * self.tau) / (self.th_min + 0.5 * self.tau)
         ))
 
+        # Clip by max speed.
+        self.v_des = min(self.v_des, self.v_max)
+
         # Compute desired acceleration.
         self.accel = self._get_accel_from_vdes(v_t=v, v_des=self.v_des)
 
@@ -406,12 +348,15 @@ class NonLocalTrafficFLowHarmonizer(object):
 class TrajectoryEnv(gym.Env):
 
     def __init__(self):
+        self._t0 = 0.
         # simulation step size
         self.dt = 0.1
         # human time delay, in steps
         self.delay = 0
         # platoon index
         self._platoon_ix = 0
+        # a rollout counter, to choose with trajectory to run
+        self._rollout = 0
         # the names of all valid trajectories for training purposes
         self.fp = [
             '2021-03-09-13-35-04_2T3MWRFVXLW056972_masterArray_0_6825',
@@ -423,7 +368,7 @@ class TrajectoryEnv(gym.Env):
             '2021-04-16-12-34-41_2T3MWRFVXLW056972_masterArray_0_5778',
             '2021-04-19-12-27-33_2T3MWRFVXLW056972_masterArray_0_16467',
             '2021-04-19-12-27-33_2T3MWRFVXLW056972_masterArray_1_6483',
-            '2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050',
+            # '2021-04-22-12-47-13_2T3MWRFVXLW056972_masterArray_0_7050',
         ]
 
         # expert controller
@@ -432,20 +377,30 @@ class TrajectoryEnv(gym.Env):
         # acceleration memory
         self.prev_accel = 0.
 
+        # vehicle state data
         self.x = []
         self.v = []
         self.a = []
         self.all_vdes = []
 
+        # traffic state estimation data
         self.x_seg = []
         self.v_seg = []
         self.t_seg = []
 
     def reset(self, _add_av=True):
-        fp = random.sample(self.fp, 1)[0]
+        # Choose a trajectory.
+        fp = self.fp[self._rollout % len(self.fp)]
         directory = os.path.join(
             t_config.PROJECT_PATH,
             'dataset/data_v2_preprocessed_west/{}'.format(fp))
+
+        print("-----------")
+        print("Starting: {}".format(fp))
+        self._t0 = time.time()
+
+        # Increment rollout counter.
+        self._rollout += 1
 
         # Add leader trajectory.
         x_leader, v_leader, a_leader = get_trajectory_from_path(
@@ -466,7 +421,7 @@ class TrajectoryEnv(gym.Env):
         # Reset platoon index.
         self._platoon_ix = 0
 
-        if _add_av:
+        if _add_av and AV_PENETRATION > 0:
             # Place an automated vehicle.
             v_eq = v_leader[0]
             h_eq = get_h_eq(v=v_eq, vl=v_leader[0])
@@ -495,68 +450,74 @@ class TrajectoryEnv(gym.Env):
         """See parent class."""
         done = False
 
-        # ego vehicle state
-        x_av = self.x[-1]
-        v_av = self.v[-1]
+        if AV_PENETRATION > 0:
+            # ego vehicle state
+            x_av = self.x[-1]
+            v_av = self.v[-1]
 
-        # lead vehicle state
-        x_leader = self.x[-2]
-        v_leader = self.v[-2]
+            # lead vehicle state
+            x_leader = self.x[-2]
+            v_leader = self.v[-2]
 
-        # time and segment index
-        t = len(x_av) - 1
-        ix_t = bisect.bisect(self.t_seg, self.dt * t) - 1
+            # time and segment index
+            t = len(x_av) - 1
+            ix_t = bisect.bisect(self.t_seg, self.dt * t) - 1
 
-        # Compute expert action.
-        expert_action = self.expert.get_accel(
-            v=v_av[t],
-            vl=v_leader[t],
-            h=x_leader[t] - x_av[t] - VEHICLE_LENGTH,
-            x=x_av[t],
-            x_seg=self.x_seg,
-            v_seg=self.v_seg[ix_t],
-        )
-        expert_vdes = self.expert.v_des
-        self.all_vdes[-1].append(expert_vdes)
+            # Compute expert action.
+            expert_accel = self.expert.get_accel(
+                v=v_av[t],
+                vl=v_leader[t],
+                h=x_leader[t] - x_av[t] - VEHICLE_LENGTH,
+                x=x_av[t],
+                x_seg=self.x_seg,
+                v_seg=self.v_seg[ix_t],
+            )
+            expert_vdes = self.expert.v_des
+            expert_action = max(-5, min(5, expert_vdes - v_av[t]))
+            self.all_vdes[-1].append(expert_vdes)
 
-        # Get AV's acceleration.
-        accel = expert_action if action is None else self.get_av_accel(action)
+            # Get AV's acceleration.
+            accel = expert_accel if action is None else self.get_av_accel(
+                action)
 
-        # Update dynamics.
-        x_tp1 = x_av[-1] + v_av[-1] * self.dt + 0.5 * accel * self.dt ** 2
-        v_tp1 = v_av[-1] + accel * self.dt
+            # Update dynamics.
+            x_tp1 = x_av[-1] + v_av[-1] * self.dt + 0.5 * accel * self.dt ** 2
+            v_tp1 = v_av[-1] + accel * self.dt
 
-        self.x[-1].append(x_tp1)
-        self.v[-1].append(v_tp1)
-        self.a[-1].append(accel)
+            self.x[-1].append(x_tp1)
+            self.v[-1].append(v_tp1)
+            self.a[-1].append(accel)
+        else:
+            expert_action = None
 
         # Check if automated vehicle is done computing its actions.
-        if len(self.v[-1]) == len(self.v[0]):
+        if AV_PENETRATION == 0 or len(self.v[-1]) == len(self.v[0]):
             self._platoon_ix += 1
-            print(self._platoon_ix)
 
-            if self._platoon_ix >= NUM_VEHICLES:
-                # Check if done conditions were met.
-                done = True
-            else:
-                # Add human vehicles.
-                while self._platoon_ix % int(1/AV_PENETRATION) != 0:
-                    # Increment platoon index.
-                    self._platoon_ix += 1
+            veh_to_add = NUM_VEHICLES if AV_PENETRATION == 0 \
+                else min(NUM_VEHICLES-self._platoon_ix, int(1/AV_PENETRATION)-1)
 
-                    # Compute human-driven dynamics.
-                    x_ego, v_ego, a_ego = get_idm_trajectory(
-                        x_leader=self.x[-1],
-                        v_leader=self.v[-1],
-                        dt=self.dt,
-                        delay=self.delay,
-                    )
+            for _ in range(veh_to_add):
+                # Increment platoon index.
+                self._platoon_ix += 1
 
-                    # Append vehicle data.
-                    self.x.append(x_ego)
-                    self.v.append(v_ego)
-                    self.a.append(a_ego)
+                # Compute human-driven dynamics.
+                x_ego, v_ego, a_ego = get_idm_trajectory(
+                    x_leader=self.x[-1],
+                    v_leader=self.v[-1],
+                    dt=self.dt,
+                    delay=self.delay,
+                )
 
+                # Append vehicle data.
+                self.x.append(x_ego)
+                self.v.append(v_ego)
+                self.a.append(a_ego)
+
+            # Check if enough vehicles were collected.
+            done = self._platoon_ix >= NUM_VEHICLES
+
+            if (not done) and (AV_PENETRATION > 0):
                 # Initialize next automated vehicle.
                 x_leader = self.x[-1]
                 v_leader = self.v[-1]
@@ -586,14 +547,17 @@ class TrajectoryEnv(gym.Env):
             v_leader=self.v[-2],
         )
         reward = 0.
-        info = {"expert_actions": [np.array([expert_vdes])]}
+        info = {"expert_action": [np.array([expert_action])]}
+        if done:
+            info.update(self.compute_metrics())
+
+        if done:
+            print("Done: {}".format(round(time.time() - self._t0, 2)))
 
         return next_obs, reward, done, info
 
     def get_av_accel(self, action):
         """Convert actions to a desired acceleration."""
-        v_des = action[0][0]
-
         # failsafe parameters
         h_min = 5.
         tau = 5.
@@ -608,7 +572,14 @@ class TrajectoryEnv(gym.Env):
 
         # approximation for leader acceleration
         t0 = max(0, t - 50)
-        a_lead = (self.v[t] - self.v[t0]) / (self.dt * (t - t0))
+        if t - t0 > 0:
+            a_lead = min(
+                0., (self.v[-2][t] - self.v[-2][t0]) / (self.dt * (t - t0)))
+        else:
+            a_lead = 0.
+
+        # Get desired speed from action.
+        v_des = v_t + action[0][0]
 
         # Update desired speed based on safety.
         v_des = max(0., min(
@@ -629,6 +600,9 @@ class TrajectoryEnv(gym.Env):
 
         self.prev_accel = accel
 
+        # Make sure speed is not negative.
+        accel = max(-v_t / self.dt, accel)
+
         return accel
 
     @staticmethod
@@ -644,7 +618,7 @@ class TrajectoryEnv(gym.Env):
         """
         history_length = 50
         speed_scale = 40.
-        th_scale = 10.
+        h_scale = 100.
 
         t = len(x_av)
         t0 = max(0, t - history_length)
@@ -652,11 +626,10 @@ class TrajectoryEnv(gym.Env):
         x_t = x_av[-1]
         v_t = v_av[-1]
         h_t = x_leader[t-1] - x_t - VEHICLE_LENGTH
-        th_t = h_t / v_t
 
         obs = np.array(
-            [th_t / th_scale, v_t / speed_scale]
-            + [0.] * (50 - t + t0)
+            [h_t / h_scale, v_t / speed_scale]
+            + [0.] * (history_length - t + t0)
             + [val / speed_scale for val in v_leader[t0:t]])
 
         return [obs]
@@ -696,7 +669,86 @@ class TrajectoryEnv(gym.Env):
 
         return x_av, v_av, a_av, v_des
 
-    def plot_statistics(self):
+    def compute_metrics(self):
+        # increment for AVs
+        incr = int(1 if AV_PENETRATION == 0 else 1 / AV_PENETRATION)
+        energy_model = PFM2019RAV4()
+        mpg = []
+        distance = []
+        for i in range(len(self.x)):
+            x = np.array(self.x[i])
+            v = np.array(self.v[i])
+            a = np.array(self.a[i])
+
+            energy = energy_model.get_instantaneous_fuel_consumption(
+                speed=v[:-1], grade=0., accel=a)
+
+            distance.append((x[-1] - x[0]) / 1609.34)
+            mpg.append(((x[-1] - x[0]) / 1609.34) / (sum(energy) / 3600 * 0.1))
+
+        try:
+            h = np.array(self.x[:-1:incr]) \
+                - np.array(self.x[1::incr]) - VEHICLE_LENGTH
+            v = np.array(self.v[1::incr])
+            th = h / np.clip(v, a_min=1, a_max=np.inf)
+            th = th.flatten()[v.flatten() >= 1]
+        except:
+            h = [-1]
+            th = [-1]
+
+        # print('-----------')
+        # print("VMT: {}".format(round(np.mean(distance), 2)))
+        # print("Global MPG: {}".format(round(np.mean(mpg), 2)))
+        # if AV_PENETRATION > 0:
+        #     print("AV MPG: {}".format(round(np.mean(mpg[1::incr]), 2)))
+        # print("")
+        # print("Max headway: {}".format(round(np.max(h), 2)))
+        # print("Min headway: {}".format(round(np.min(h), 2)))
+        # print("Avg headway: {}".format(round(np.mean(h), 2)))
+        # print("")
+        # print("Max time headway: {}".format(round(np.max(th), 2)))
+        # print("Min time headway: {}".format(round(np.min(th), 2)))
+        # print("Avg time headway: {}".format(round(np.mean(th), 2)))
+        # print('-----------')
+
+        ret = {
+            "vmt": np.mean(distance),
+            "mpg": np.mean(mpg),
+            "h_max": np.max(h),
+            "h_min": np.min(h),
+            "h_avg": np.mean(h),
+            "th_max": np.max(th),
+            "th_min": np.min(th),
+            "th_avg": np.mean(th),
+        }
+
+        if AV_PENETRATION > 0:
+            ret["av_mpg"] = np.mean(mpg[1::incr])
+
+        return ret
+
+    def gen_emission(self, emission_path):
+        data = {"id": [], "t": [], "x": [], "v": [], "a": []}
+        for i in range(len(self.x)):
+            x = self.x[i]
+            v = self.x[i]
+            a = self.x[i]
+
+            for t in range(len(x)):
+                data["id"].append(i)
+                data["t"].append(t * self.dt)
+                data["x"].append(x[t])
+                data["v"].append(v[t])
+                data["a"].append(a[t] if t < len(a) else 0.)
+
+        os.makedirs(emission_path, exist_ok=True)
+
+        pd.DataFrame.from_dict(data).to_csv(
+            os.path.join(emission_path, "trajectory.csv"), index=False)
+
+        self.plot_statistics(emission_path=emission_path)
+
+    def plot_statistics(self, emission_path=None):
         x = self.x
         v = self.v
         v_des = self.all_vdes
@@ -714,7 +766,11 @@ class TrajectoryEnv(gym.Env):
         plt.xlabel("Position (m)", fontsize=15)
         plt.yticks(fontsize=15)
         plt.ylabel("Speed (m/s)", fontsize=15)
-        plt.show()
+        if emission_path is not None:
+            plt.savefig(os.path.join(emission_path, "spatial.png"))
+        else:
+            plt.show()
+        plt.close()
 
         plt.figure(figsize=(16, 4))
         for i in range(1, len(x), 10):
@@ -727,7 +783,11 @@ class TrajectoryEnv(gym.Env):
         plt.xlabel("Time (s)", fontsize=15)
         plt.yticks(fontsize=15)
         plt.ylabel("Speed (m/s)", fontsize=15)
-        plt.show()
+        if emission_path is not None:
+            plt.savefig(os.path.join(emission_path, "speed.png"))
+        else:
+            plt.show()
+        plt.close()
 
         plt.figure(figsize=(16, 4))
         times = list(np.arange(len(x[0])) * self.dt)
@@ -738,7 +798,11 @@ class TrajectoryEnv(gym.Env):
         plt.xlabel("Time (s)", fontsize=15)
         plt.yticks(fontsize=15)
         plt.ylabel("Position (km)", fontsize=15)
-        plt.show()
+        if emission_path is not None:
+            plt.savefig(os.path.join(emission_path, "time_space.png"))
+        else:
+            plt.show()
+        plt.close()
 
         plt.figure(figsize=(16, 4))
         for i in range(len(v_des)):
@@ -748,53 +812,19 @@ class TrajectoryEnv(gym.Env):
         plt.xlabel("Time (s)", fontsize=15)
         plt.yticks(fontsize=15)
         plt.ylabel("Desired speed (m/s)", fontsize=15)
-        plt.show()
+        if emission_path is not None:
+            plt.savefig(os.path.join(emission_path, "v_des.png"))
+        else:
+            plt.show()
+        plt.close()
 
-    def rollout(self):
-        t0 = time.time()
+    @property
+    def observation_space(self):
+        return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(52,))
 
-        _ = self.reset(_add_av=False)
-
-        while self._platoon_ix < NUM_VEHICLES:
-            if self.x[-1][-1] < 0:
-                print(self._platoon_ix)
-                break
-
-            # Update automated vehicle trajectory after initial
-            # position of the leader.
-            if AV_PENETRATION > 0 \
-                    and self._platoon_ix % int(1/AV_PENETRATION) == 0:
-                print(self._platoon_ix)
-                x_ego, v_ego, a_ego, v_des_i = self.get_automated_trajectory(
-                    x_leader=self.x[-1],
-                    v_leader=self.v[-1],
-                )
-                self.all_vdes.append(v_des_i)
-            else:
-                # Compute human-driven dynamics.
-                x_ego, v_ego, a_ego = get_idm_trajectory(
-                    x_leader=self.x[-1],
-                    v_leader=self.v[-1],
-                    dt=self.dt,
-                    delay=self.delay,
-                )
-
-            # Append vehicle data.
-            self.x.append(x_ego)
-            self.v.append(v_ego)
-            self.a.append(a_ego)
-
-            if any(self.x[-2][t] - self.x[-1][t] < VEHICLE_LENGTH
-                   for t in range(len(self.x[-1]))):
-                print("Collision")
-                break
-
-            # Increment platoon index.
-            self._platoon_ix += 1
-
-        print(time.time() - t0)
-
-        return self.x, self.v, self.a, self.all_vdes
+    @property
+    def action_space(self):
+        return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(1,))
 
     def render(self, mode="human"):
         """See parent class."""

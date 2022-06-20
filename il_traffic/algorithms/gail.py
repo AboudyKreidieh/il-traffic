@@ -1,4 +1,4 @@
-"""Implementation of the InfoGAIL algorithm.
+"""Implementation of the GAIL algorithm.
 
 See: https://arxiv.org/pdf/1703.08840.pdf
 """
@@ -19,7 +19,11 @@ from il_traffic.utils.torch_utils import conjugate_gradient
 from il_traffic.utils.torch_utils import rescale_and_linesearch
 
 
-INFOGAIL_PARAMS = {
+GAIL_PARAMS = {
+    # ======================================================================= #
+    #                            Default parameters                           #
+    # ======================================================================= #
+
     # TODO
     "lambda": 0.001,
     # GAE discount factor
@@ -34,18 +38,30 @@ INFOGAIL_PARAMS = {
     "cg_damping": 0.1,
     # whether to normalize the advantage
     "normalize_advantage": True,
+
+    # ======================================================================= #
+    #                           InfoGAIL parameters                           #
+    # ======================================================================= #
+
+    # TODO
+
+    # ======================================================================= #
+    #                      Directed InfoGAIL parameters                       #
+    # ======================================================================= #
+
+    # TODO
 }
 
 
-class InfoGAIL(ILAlgorithm):
-    """InfoGAIL training algorithm.
+class GAIL(ILAlgorithm):
+    """GAIL training algorithm and variants.
 
     See: https://arxiv.org/pdf/1703.08840.pdf
     """
 
     def __init__(self, env, alg_params, model_params):
         """See parent class."""
-        super(InfoGAIL, self).__init__(
+        super(GAIL, self).__init__(
             env=env,
             alg_params=alg_params,
             model_params=model_params,
@@ -130,10 +146,10 @@ class InfoGAIL(ILAlgorithm):
             torch.load(
                 os.path.join(ckpt_path, f"discriminator-{epoch}.ckpt")))
 
-    def load_demos(self, demo_dir):
+    def load_demos(self):
         """See parent class."""
         if isinstance(self.env, TrajectoryEnv):
-            expert_obs, expert_acts = self._get_i24_samples(demo_dir)
+            expert_obs, expert_acts = self._get_i24_samples()
         elif isinstance(self.env, GymEnv):
             expert_obs, expert_acts = self._get_pendulum_samples()
         else:

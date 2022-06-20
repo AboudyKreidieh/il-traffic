@@ -4,6 +4,7 @@ See: https://arxiv.org/pdf/1011.0686.pdf
 """
 import numpy as np
 import os
+import random
 import torch
 import torch.nn as nn
 from torch import FloatTensor
@@ -27,6 +28,8 @@ DAGGER_PARAMS = dict(
     batch_size=128,
     # the maximum number of samples to store
     buffer_size=2000000,
+    # number of times a training operation is run in a given iteration
+    num_train_steps=1,
 )
 
 
@@ -56,6 +59,8 @@ class DAgger(ILAlgorithm):
             "obs": deque(maxlen=self.buffer_size),
             "expert_actions": deque(maxlen=self.buffer_size),
         }
+        self._index = 0
+        self._init_samples = 0
 
         # Prepare the model params.
         params = {}
@@ -68,7 +73,6 @@ class DAgger(ILAlgorithm):
             ac_dim=self.env.action_space.shape[0],
             **params,
         )
-        self.model.to(self.device)
 
         # Create an optimizer object.
         self._optimizer = torch.optim.Adam(
@@ -91,15 +95,16 @@ class DAgger(ILAlgorithm):
             log_dir, "checkpoints", "model-{}.tp".format(epoch))
         self.model.load_state_dict(torch.load(name))
 
-    def load_demos(self, demo_dir):
+    def load_demos(self):
         """See parent class."""
         if isinstance(self.env, TrajectoryEnv):
-            expert_obs, expert_acts = self._get_i24_samples(demo_dir)
+            expert_obs, expert_acts = self._get_i24_samples()
         elif isinstance(self.env, GymEnv):
             expert_obs, expert_acts = self._get_pendulum_samples()
         else:
             raise NotImplementedError("Demos cannot be loaded.")
 
+        self._init_samples = len(expert_obs)
         self.samples["obs"] = expert_obs
         self.samples["expert_actions"] = expert_acts
 
@@ -119,32 +124,54 @@ class DAgger(ILAlgorithm):
         """See parent class."""
         n_agents = len(obs)
         for i in range(n_agents):
-            self.samples["obs"].append(obs[i])
-            self.samples["expert_actions"].append(expert_action[i])
+            if len(self.samples["obs"]) < self.buffer_size:
+                self.samples["obs"].append(obs[i])
+                self.samples["expert_actions"].append(expert_action[i])
+            else:
+                self.samples["obs"][self._index] = obs[i]
+                self.samples["expert_actions"][self._index] = expert_action[i]
+
+            self._index = max(
+                self._init_samples, (self._index + 1) % self.buffer_size)
 
     def update(self):
         """See parent class."""
+        nsamples = len(self.samples["obs"])
         total_loss = []
         for _ in tqdm(range(self.num_train_steps)):
-            # Sample a batch.
-            batch_i = np.random.randint(
-                0, len(self.samples["obs"]), size=self.batch_size)
+            # Shuffle indices.
+            indices = list(range(nsamples))
+            random.shuffle(indices)
 
-            obs = FloatTensor(
-                [self.samples["obs"][i] for i in batch_i], 0)
-            target = FloatTensor(
-                [self.samples["expert_actions"][i] for i in batch_i], 0)
+            for i in range(10):
+                ix0 = (nsamples // 10) * i
+                ix1 = ix0 + nsamples // 10
+                batch_i = indices[ix0:ix1]
+                obs = FloatTensor(np.array([
+                    self.samples["obs"][i] for i in batch_i]))
+                target = FloatTensor(np.array([
+                    self.samples["expert_actions"][i] for i in batch_i]))
 
-            # Set the model to training mode.
-            self.model.train()
+                # Set the model to training mode.
+                self.model.train()
 
-            # Compute loss.
-            loss = self._loss_fn(self.model(obs), target).mean()
+                # Compute loss.
+                loss = self._loss_fn(self.model(obs), target).mean()
 
-            # Optimize the model.
-            self._optimizer.zero_grad()
-            loss.backward()
-            self._optimizer.step()
-            total_loss.append(loss.item())
+                # Optimize the model.
+                self._optimizer.zero_grad()
+                loss.backward()
+                self._optimizer.step()
+                total_loss.append(loss.item())
 
-        return np.mean(total_loss)
+        # Compute evaluation loss.
+        self.model.eval()
+        obs = FloatTensor(np.array([
+            self.samples["obs"][i]
+            for i in range(self._init_samples)]))
+        target = FloatTensor(np.array([
+            self.samples["expert_actions"][i]
+            for i in range(self._init_samples)]))
+        loss = self._loss_fn(self.model(obs), target).mean()
+
+        return loss

@@ -14,9 +14,9 @@ from time import strftime
 
 import il_traffic.config as config
 from il_traffic.algorithms import DAgger
-from il_traffic.algorithms import InfoGAIL
+from il_traffic.algorithms import GAIL
 from il_traffic.algorithms.dagger import DAGGER_PARAMS
-from il_traffic.algorithms.infogail import INFOGAIL_PARAMS
+from il_traffic.algorithms.gail import GAIL_PARAMS
 from il_traffic.models.fcnet import FEEDFORWARD_PARAMS
 from il_traffic.utils.misc import ensure_dir
 
@@ -42,7 +42,7 @@ def parse_args(args):
     parser.add_argument(
         '--num_rollouts',
         type=int,
-        default=10,
+        default=9,
         help='number of rollouts to collect in between training iterations '
              'for the data aggregation procedure.')
     parser.add_argument(
@@ -75,7 +75,7 @@ def parse_args(args):
         type=str,
         default="DAgger",
         help="the algorithm class to use (in string format). One of "
-             "{\"DAgger\", \"InfoGAIL\"}")
+             "{\"DAgger\", \"GAIL\"}")
 
     # DAgger
     parser.add_argument(
@@ -101,40 +101,39 @@ def parse_args(args):
     parser.add_argument(
         '--num_train_steps',
         type=int,
-        default=1000,
-        help='number of times a training operation is run in a given '
-             'iteration of training')
+        default=DAGGER_PARAMS["num_train_steps"],
+        help='number of training operations in a given iteration')
 
-    # InfoGAIL
+    # GAIL
     parser.add_argument(
         '--lambda',
         type=float,
-        default=INFOGAIL_PARAMS["lambda"],
+        default=GAIL_PARAMS["lambda"],
         help="TODO")
     parser.add_argument(
         '--gae_gamma',
         type=float,
-        default=INFOGAIL_PARAMS["gae_gamma"],
+        default=GAIL_PARAMS["gae_gamma"],
         help="GAE discount factor")
     parser.add_argument(
         '--gae_lambda',
         type=float,
-        default=INFOGAIL_PARAMS["gae_lambda"],
+        default=GAIL_PARAMS["gae_lambda"],
         help="TODO")
     parser.add_argument(
         '--epsilon',
         type=float,
-        default=INFOGAIL_PARAMS["epsilon"],
+        default=GAIL_PARAMS["epsilon"],
         help="TODO")
     parser.add_argument(
         '--max_kl',
         type=float,
-        default=INFOGAIL_PARAMS["max_kl"],
+        default=GAIL_PARAMS["max_kl"],
         help="the Kullback-Leibler loss threshold")
     parser.add_argument(
         '--cg_damping',
         type=float,
-        default=INFOGAIL_PARAMS["cg_damping"],
+        default=GAIL_PARAMS["cg_damping"],
         help="the compute gradient dampening factor")
     parser.add_argument(
         "--normalize_advantage",
@@ -187,7 +186,7 @@ class Trainer(object):
         env_name : str
             the name of the training environment
         alg_cls : str
-            the algorithm class to use. One of {"DAgger", "InfoGAIL"}
+            the algorithm class to use. One of {"DAgger", "GAIL"}
         alg_params : dict
             dictionary of algorithm-specific parameters
         model_params : dict
@@ -259,8 +258,8 @@ class Trainer(object):
 
         if alg_cls == "DAgger":
             alg_cls = DAgger
-        elif alg_cls == "InfoGAIL":
-            alg_cls = InfoGAIL
+        elif alg_cls == "GAIL":
+            alg_cls = GAIL
         else:
             raise ValueError("Unknown algorithm: {}".format(alg_cls))
 
@@ -268,8 +267,7 @@ class Trainer(object):
         self.alg = alg_cls(self.env, alg_params, model_params).to(self.device)
 
         # Generate initial expert observations and actions.
-        self.alg.load_demos(
-            os.path.join(config.PROJECT_PATH, "demos", env_name))
+        self.alg.load_demos()
 
         # Make sure that the log directory exists, and if not, make it.
         ensure_dir(self.log_dir)

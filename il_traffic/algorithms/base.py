@@ -1,9 +1,8 @@
 """Base imitation learning algorithm."""
 import torch.nn as nn
 import numpy as np
-import os
-import pickle
 from copy import deepcopy
+from collections import defaultdict
 
 
 class ILAlgorithm(nn.Module):
@@ -51,14 +50,8 @@ class ILAlgorithm(nn.Module):
         """
         raise NotImplementedError
 
-    def load_demos(self, demo_dir):
-        """Load initial expert demos.
-
-        Parameters
-        ----------
-        demo_dir : str
-            the directory containing relevant demonstration data
-        """
+    def load_demos(self):
+        """Load initial expert demos."""
         raise NotImplementedError
 
     def get_action(self, obs: list):
@@ -103,30 +96,37 @@ class ILAlgorithm(nn.Module):
         """
         raise NotImplementedError
 
-    def _get_i24_samples(self, demo_dir):
+    def _get_i24_samples(self):
         """Return initial samples for the I-24 environment."""
-        filenames = [x for x in os.listdir(demo_dir) if x.endswith(".pkl")]
-
         exp_obs = []
         exp_acts = []
-        for ix, f_idx in enumerate(filenames):
-            fname = os.path.join(demo_dir, f_idx)
+        steps = 0
+        info_data = defaultdict(list)
+        for _ in range(9):
+            done = False
+            ep_rwds = []
+            ob = self.env.reset()
+            while not done:
+                ob1, rwd, done, info = self.env.step(None)
 
-            with open(fname, 'rb') as f:
-                data = pickle.load(f)
+                n_agents = len(ob)
+                for i in range(n_agents):
+                    exp_obs.append(ob[i])
+                    exp_acts.append(info["expert_action"][i])
+                ep_rwds.append(rwd)
 
-            # Extract demonstrations.
-            s0, a0 = data[0]
-            for i in range(1, len(data)):
-                s1, a1 = data[i]
-                a = a1 - a0
-                exp_obs.append(s0)
-                exp_acts.append(a)
-                s0 = s1
-                a0 = a1
+                ob = deepcopy(ob1)
+                steps += 1
 
-            print('{} Demo Trajectories Loaded. Total Experience={}'.format(
-                ix + 1, len(self.samples["obs"])))
+            if done:
+                for key in info.keys():
+                    if key != "expert_action":
+                        info_data[key].append(info[key])
+
+        print("------------")
+        for key in info_data.keys():
+            print(key, np.mean(info_data[key]))
+        print("------------")
 
         return exp_obs, exp_acts
 
