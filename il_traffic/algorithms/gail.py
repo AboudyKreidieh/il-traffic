@@ -192,18 +192,17 @@ class GAIL(ILAlgorithm):
             self.acts.extend(ep_acts)
 
             for i in range(n_agents):
-                ep_gms = FloatTensor([
+                ep_gms = np.array([
                     self.gae_gamma ** t for t in range(this_horizon)])
-                ep_lmbs = FloatTensor([
+                ep_lmbs = np.array([
                     self.gae_lambda ** t for t in range(this_horizon)])
 
                 ep_costs = -torch.log(
-                    self.d(ep_obs[i], ep_acts[i])).squeeze().detach()
+                    self.d(ep_obs[i], ep_acts[i])).squeeze().detach().numpy()
                 ep_disc_costs = ep_gms * ep_costs
 
-                ep_disc_rets = FloatTensor(
-                    [sum(ep_disc_costs[i:]) for i in range(this_horizon)])
-                ep_rets = ep_disc_rets / ep_gms
+                ep_disc_rets = np.cumsum(ep_disc_costs[::-1])[::-1]
+                ep_rets = FloatTensor(ep_disc_rets / ep_gms)
 
                 self.rets.append(ep_rets)
 
@@ -211,15 +210,16 @@ class GAIL(ILAlgorithm):
                 curr_vals = self.v(ep_obs[i]).detach()
                 next_vals = torch.cat(
                     (self.v(ep_obs[i])[1:], FloatTensor([[0.]]))).detach()
-                ep_deltas = ep_costs.unsqueeze(-1) \
+                ep_deltas = FloatTensor(ep_costs).unsqueeze(-1) \
                     + self.gae_gamma * next_vals - curr_vals
 
                 ep_advs = FloatTensor([
-                    ((ep_gms * ep_lmbs)[:this_horizon - j].unsqueeze(-1)
+                    (FloatTensor(ep_gms * ep_lmbs)[:this_horizon - j].
+                     unsqueeze(-1)
                      * ep_deltas[j:]).sum() for j in range(this_horizon)])
                 self.advs.append(ep_advs)
 
-                self.gms.append(ep_gms)
+                self.gms.append(FloatTensor(ep_gms))
 
             self._ep_obs = [[] for _ in range(n_agents)]
             self._ep_acts = [[] for _ in range(n_agents)]
