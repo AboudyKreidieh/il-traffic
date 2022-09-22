@@ -51,7 +51,7 @@ class BottleneckEnv(TrafficEnv):
             n_avs = n_vehicles // incr
 
         # indices for automated vehicles
-        self.av_indices = incr * np.arange(n_avs, dtype=np.float32) + 1
+        self.av_indices = incr * np.arange(n_avs, dtype=int) + 1
         # expert controllers
         self.expert = [
             NonLocalTrafficFLowHarmonizer(dt=self.dt)
@@ -91,7 +91,7 @@ class BottleneckEnv(TrafficEnv):
         self.all_vdes = []
 
         # traffic state estimation data
-        self.x_seg = []
+        # self.x_seg = []
         self.v_seg = []
 
     def reset(self, _add_av=True):
@@ -112,7 +112,7 @@ class BottleneckEnv(TrafficEnv):
 
         # Define initial state.
         h_eq = 1.1 * v0  # get_h_eq(v=v0, vl=v0)
-        x_init = 10000 - (h_eq + VEHICLE_LENGTH) * np.arange(
+        x_init = BN_START - (h_eq + VEHICLE_LENGTH) * np.arange(
             self.n_vehicles, dtype=np.float32)
         v_init = v0 * np.ones(self.n_vehicles, dtype=np.float32)
         self.x.append(x_init)
@@ -149,6 +149,12 @@ class BottleneckEnv(TrafficEnv):
             # Update traffic state estimation data.
             self.update_tse()
 
+            av_indices, experts = [], []
+            for ix, expert in zip(self.av_indices, self.expert):
+                if 0 <= x_t[ix] <= 10000:
+                    av_indices.append(ix)
+                    experts.append(expert)
+
             # Get expert accelerations.
             expert_accel = [expert.get_accel(
                 v=v_t[ix],
@@ -157,14 +163,14 @@ class BottleneckEnv(TrafficEnv):
                 x=x_t[ix],
                 x_seg=self.x_seg,
                 v_seg=self.v_seg,
-            ) for ix, expert in zip(self.av_indices, self.expert)]
+            ) for ix, expert in zip(av_indices, experts)]
 
             # Convert to bounded desired speed differences.
             expert_vdes = np.array(
-                [expert.v_des for expert in self.expert], dtype=np.float32)
+                [expert.v_des for expert in experts], dtype=np.float32)
             expert_action = [
                 np.array([max(-5, min(5, expert_vdes[i] - v_t[ix]))])
-                for i, ix in enumerate(self.av_indices)]
+                for i, ix in enumerate(av_indices)]
 
             # Store in memory.
             self.all_vdes.append(expert_vdes)
@@ -176,7 +182,7 @@ class BottleneckEnv(TrafficEnv):
                 a_av = expert_accel
 
             # Update accelerations in AV indices.
-            for ix, a in zip(self.av_indices, a_av):
+            for ix, a in zip(av_indices, a_av):
                 a_t[ix] = a
         else:
             expert_action = None
@@ -364,14 +370,13 @@ class BottleneckEnv(TrafficEnv):
 
             # Get delayed information (reversed since vehicles are from
             # front to end).
-            x = self.v[-(sensing_delay + 1)][::-1]
+            x = self.x[-(sensing_delay + 1)][::-1]
             v = self.v[-(sensing_delay + 1)][::-1]
-
             # Sort speeds by positions.
             speeds = [[] for _ in range(len(self.x_seg))]
             index = 0
             for i in range(len(x)):
-                if x[i] > self.x_seg[i]:
+                if x[i] > self.x_seg[index]:
                     index += 1
                 if index == len(self.x_seg):
                     break
@@ -403,7 +408,7 @@ class BottleneckEnv(TrafficEnv):
             self.x = list(np.c_[self.x[::skip]].T)
             self.v = list(np.c_[self.v[::skip]].T)
             self.a = list(np.c_[self.a[::skip]].T)
-            if len(self.all_vdes) > 0:
-                self.all_vdes = list(np.c_[self.all_vdes[::skip]].T)
+            # if len(self.all_vdes) > 0:
+            #     self.all_vdes = list(np.c_[self.all_vdes[::skip]].T)
 
-        return self.x, self.v, self.a, self.all_vdes, skip * self.dt
+        return self.x, self.v, self.a, [], skip * self.dt

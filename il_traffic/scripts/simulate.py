@@ -7,6 +7,12 @@ import sys
 import argparse
 from time import strftime
 
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+import numpy as np
+warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+
 from il_traffic.environments.trajectory import TrajectoryEnv
 from il_traffic.environments.bottleneck import BottleneckEnv
 
