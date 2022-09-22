@@ -18,7 +18,7 @@ IDM_COEFFS = {
     "b": 2.0,
     "delta": 4.,
     "s0": 2.,
-    "noise": 0.3,
+    "noise": 0.0,
 }
 # energy model parameters
 RAV4_2019_COEFFS = {
@@ -355,12 +355,19 @@ class TrafficEnv(gym.Env):
         mpg = []
         distance = []
         for i in range(len(x)):
-            xi = np.array(x[i])
-            vi = np.array(v[i])
+            xi = np.array(x[i])[:-1]
+            vi = np.array(v[i])[:-1]
             ai = np.array(a[i])
 
+            # Remove outside of bounds.
+            xmin = 0
+            xmax = 12000
+            vi = vi[(xmin <= xi) & (xi <= xmax)]
+            ai = ai[(xmin <= xi) & (xi <= xmax)]
+            xi = xi[(xmin <= xi) & (xi <= xmax)]
+
             energy = energy_model.get_instantaneous_fuel_consumption(
-                speed=vi[1:], grade=0., accel=ai)
+                speed=vi, grade=0., accel=ai)
 
             distance.append(
                 (xi[-1] - xi[0]) / 1609.34)
