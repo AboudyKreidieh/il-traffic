@@ -1,5 +1,7 @@
 """Miscellaneous utility methods."""
 import os
+import math
+import random
 import errno
 
 

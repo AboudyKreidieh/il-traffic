@@ -9,7 +9,7 @@ from torch import FloatTensor
 
 from il_traffic.algorithms.base import ILAlgorithm
 from il_traffic.environments.gym_env import GymEnv
-from il_traffic.environments.trajectory_env import TrajectoryEnv
+from il_traffic.environments.trajectory import TrajectoryEnv
 from il_traffic.models.discriminator import Discriminator
 from il_traffic.models.fcnet import FeedForwardModel
 from il_traffic.utils.torch_utils import get_flat_grads

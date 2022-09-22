@@ -1,0 +1,484 @@
+import gym
+import pandas as pd
+import math
+import os
+import random
+import matplotlib.pyplot as plt
+import numpy as np
+from copy import deepcopy
+from collections import deque
+
+# vehicle length, in meters
+VEHICLE_LENGTH = 4.
+# car-following parameters
+IDM_COEFFS = {
+    "v0": 33,  # 45,
+    "T": 1.,
+    "a": 1.3,
+    "b": 2.0,
+    "delta": 4.,
+    "s0": 2.,
+    "noise": 0.3,  # 0.0,
+}
+# energy model parameters
+RAV4_2019_COEFFS = {
+    'beta0': 0.013111753095302022,
+    'vc': 5.98,
+    'p1': 0.047436831067050676,
+    'C0': 0.14631964767035743,
+    'C1': 0.012179045946260292,
+    'C2': 0,
+    'C3': 2.7432588728174234e-05,
+    'p0': 0.04553801347643801,
+    'p2': 0.0018022443124799303,
+    'q0': 0,
+    'q1': 0.02609037187916979,
+    'b1': 7.1780386096154185,
+    'b2': 0.053537268955100234,
+    'b3': 0.27965662935753677,
+    'z0': 1.4940081773441736,
+    'z1': 1.2718495543500672,
+    'ver': '2.0',
+    'mass': 1717,
+    'fuel_type': 'gasoline',
+}
+# conversions
+GRAMS_PER_SEC_TO_GALS_PER_HOUR = {
+    'diesel': 1.119,  # 1.119 gal/hr = 1g/s
+    'gasoline': 1.268,  # 1.268 gal/hr = 1g/s
+}
+
+
+def get_idm_accel(v, vl, h, dt):
+    v0 = IDM_COEFFS["v0"]
+    T = IDM_COEFFS["T"]
+    a = IDM_COEFFS["a"]
+    b = IDM_COEFFS["b"]
+    delta = IDM_COEFFS["delta"]
+    s0 = IDM_COEFFS["s0"]
+    noise = IDM_COEFFS["noise"]
+
+    s_star = s0 + max(0, v*T + v*(v-vl) / (2*math.sqrt(a*b)))
+
+    accel = a * (1 - (v/v0)**delta - (s_star/h)**2)
+
+    if noise > 0:
+        accel += math.sqrt(dt) * random.gauss(0, noise)
+
+    # Make sure speed is not negative.
+    accel = max(-v/dt, accel)
+
+    return accel
+
+
+def get_h_eq(v, vl):
+    v0 = IDM_COEFFS["v0"]
+    T = IDM_COEFFS["T"]
+    a = IDM_COEFFS["a"]
+    b = IDM_COEFFS["b"]
+    delta = IDM_COEFFS["delta"]
+    s0 = IDM_COEFFS["s0"]
+
+    s_star = s0 + max(0, v*T + v*(v-vl) / (2*math.sqrt(a*b)))
+
+    return s_star / math.sqrt(1 - (v/v0)**delta)
+
+
+class PFM2019RAV4(object):
+
+    def __init__(self):
+        coeffs_dict = RAV4_2019_COEFFS
+        self.mass = coeffs_dict['mass']
+        self.state_coeffs = np.array([coeffs_dict['C0'],
+                                      coeffs_dict['C1'],
+                                      coeffs_dict['C2'],
+                                      coeffs_dict['C3'],
+                                      coeffs_dict['p0'],
+                                      coeffs_dict['p1'],
+                                      coeffs_dict['p2'],
+                                      coeffs_dict['q0'],
+                                      coeffs_dict['q1'],
+                                      coeffs_dict['z0'],
+                                      coeffs_dict['z1']])
+        self.beta0 = coeffs_dict['beta0']
+        self.vc = coeffs_dict['vc']
+        self.b1 = coeffs_dict['b1']
+        self.b2 = coeffs_dict['b2']
+        self.b3 = coeffs_dict['b3']
+        self.fuel_type = coeffs_dict['fuel_type']
+
+    def get_instantaneous_fuel_consumption(self, accel, speed, grade):
+        accel_plus = np.clip(accel, a_min=0, a_max=np.inf)
+        state_variables = np.array([1,
+                                    speed,
+                                    speed**2,
+                                    speed**3,
+                                    accel,
+                                    accel * speed,
+                                    accel * speed**2,
+                                    accel_plus ** 2,
+                                    accel_plus ** 2 * speed,
+                                    grade,
+                                    grade * speed])
+        fc = np.dot(self.state_coeffs, state_variables)
+        lower_bound = (speed <= self.vc) * self.beta0
+        fc = np.maximum(fc, lower_bound)
+        return fc * GRAMS_PER_SEC_TO_GALS_PER_HOUR[self.fuel_type]
+
+
+class NonLocalTrafficFLowHarmonizer(object):
+    """A controller that gradually pushes traffic near downstream speeds."""
+
+    def __init__(self, dt):
+        """Instantiate the vehicle class."""
+        self.dt = dt
+        self.accel = 0.
+
+        # =================================================================== #
+        #                         tunable parameters                          #
+        # =================================================================== #
+
+        # estimation type. One of: {"uniform", "gaussian"}
+        self._estimation_type = "uniform"
+        # scaling term for the response to the proportional error
+        self.c1 = 2.0
+        # scaling term for the response to the differential error
+        self.c2 = 0.5
+        # target time headway, in seconds
+        self.th_target = 2.
+        # standard deviation for the Gaussian smoothing kernel, in meters.
+        # For uniform smoothing, this acts as the smoothing window.
+        self.sigma = 3000.
+
+        # =================================================================== #
+        #                   lower-level control parameters                    #
+        # =================================================================== #
+
+        # largest possible acceleration, in m/s^2
+        self.max_accel = 1.5
+        # largest possible deceleration, in m/s^2
+        self.max_decel = 3.0
+        # exponential decay component for change in accelerations
+        self.gamma = 0.5
+
+        # =================================================================== #
+        #                         failsafe parameters                         #
+        # =================================================================== #
+
+        # prediction time horizon, in seconds
+        self.tau = 5.0
+        # minimum allowed space headway, in meters
+        self.h_min = 5
+        # minimum allowed time headway, in seconds
+        self.th_min = 0.5
+
+        # =================================================================== #
+        #                          other parameters                           #
+        # =================================================================== #
+
+        # current target speed, in m/s
+        self.v_des = 30.
+        # largest assignable target speed, in m/s
+        self.v_max = 40.
+        # buffer of leading vehicle speeds
+        self._vl = deque(maxlen=100)
+        self._lead_vel = 30.
+
+    def reset(self):
+        """Reset internal memory."""
+        self.accel = 0.
+        self.v_des = 30.
+        self._vl.clear()
+
+    @staticmethod
+    def _gaussian(x0, x, z, sigma):
+        """Perform a kernel smoothing operation on future average speeds."""
+        # Collect relevant traffic-state info.
+        # - ix0: segments in front of the ego vehicle
+        # - ix1: final segment, or clipped to estimate congested speeds
+        ix0 = next(i for i in range(len(x)) if x[i] >= x0)
+        try:
+            ix1 = next(j for j in range(ix0 + 2, len(x)) if
+                       z[j] - np.mean(z[ix0:j]) > 15) + 1
+        except StopIteration:
+            ix1 = len(x)
+        x = x[ix0:ix1]
+        z = z[ix0:ix1]
+
+        densities = 1 / (np.sqrt(2 * np.pi) * sigma) * np.exp(
+            -np.square(x - x0) / (2 * sigma ** 2))
+
+        densities = densities / sum(densities)
+
+        return sum(densities * z)
+
+    @staticmethod
+    def _uniform(x0, x, z, width):
+        """Perform uniform smoothing across a window of fixed width."""
+        # Collect relevant traffic-state info.
+        # - ix0: segments in front of the ego vehicle
+        # - ix1: final segment, or clipped to estimate congested speeds
+        ix0 = next(i for i in range(len(x)) if x[i] >= x0)
+        try:
+            ix1 = next(j for j in range(ix0 + 2, len(x))
+                       if x[j] >= (x0 + width)
+                       or z[j] - np.mean(z[ix0:j]) > 15) + 1
+        except StopIteration:
+            ix1 = len(x)
+
+        x = np.array(deepcopy(x[ix0-1:ix1]))
+        z = np.array(deepcopy(z[ix0-1:ix1]))
+
+        # Return default speed if behind the target.
+        if len(x) == 0:
+            return 30.
+
+        # Replace endpoints with a cutoff
+        z[0] = z[0] + (z[1]-z[0]) * (x0-x[0]) / (x[1]-x[0])
+        x[0] = x0
+
+        if x[-1] > x0 + width:
+            z[-1] = z[-2] + (z[-1]-z[-2]) * (x0+width-x[-2]) / (x[-1]-x[-2])
+            x[-1] = x0 + width
+
+        area = 0.5 * (z[1:]+z[:-1]) * (x[1:]-x[:-1])
+        actual_width = x[-1] - x[0]
+
+        return sum(area) / actual_width
+
+    def _get_accel_from_vdes(self, v_t, v_des):
+        """Return the desired acceleration."""
+        # Compute bounded acceleration.
+        accel = max(
+            -abs(self.max_decel), min(self.max_accel, (v_des-v_t)/self.dt))
+
+        # Reduce noise.
+        accel = self.gamma * accel + (1. - self.gamma) * self.accel
+
+        # Make sure speed is not negative.
+        accel = max(-v_t / self.dt, accel)
+
+        return accel
+
+    def get_accel(self, v, vl, h, x, x_seg, v_seg):
+        # Update the buffer of lead speeds.
+        self._vl.append(vl)
+        self._lead_vel = 0.9 * self._lead_vel + 0.1 * vl
+
+        if x_seg is not None:
+            # Compute time headway.
+            th = h / (v + 1e-6)
+            th = max(0., min(40., th))
+            th_error = th - self.th_target
+            delta_v = self._lead_vel - v
+
+            # weighting between CACC and ACC
+            alpha = max(0., min(1., th - 1))
+
+            # Choose downstream estimation method.
+            estimation_method = \
+                self._uniform if self._estimation_type == "uniform" \
+                else self._gaussian
+
+            # Compute target speed.
+            v_target = \
+                alpha * estimation_method(x, x_seg, v_seg, self.sigma) + \
+                (1. - alpha) * self.v_des + \
+                self.c1 * th_error + \
+                self.c2 * delta_v
+
+            # Update desired speed.
+            self.v_des = max(
+                v-abs(self.max_decel)*self.dt,
+                min(v+self.max_accel*self.dt, v_target))
+
+        # Predict the average future acceleration for the leader.
+        if len(self._vl) > 1:
+            ix = min(len(self._vl), 50)  # 5 seconds
+            _vl = list(self._vl)[-int(ix):]
+            a_lead = max(0., (_vl[-1] - _vl[0]) / (self.dt*(len(_vl) - 1)))
+        else:
+            a_lead = 0.
+
+        # Clip by values that maintain a safe time headway.
+        self.v_des = max(0., min(
+            self.v_des,
+            (h
+             - self.h_min
+             + vl * self.tau
+             + 0.5 * a_lead * self.tau ** 2
+             - 0.5 * v * self.tau) / (self.th_min + 0.5 * self.tau)
+        ))
+
+        # Clip by max speed.
+        self.v_des = min(self.v_des, self.v_max)
+
+        # Compute desired acceleration.
+        self.accel = self._get_accel_from_vdes(v_t=v, v_des=self.v_des)
+
+        return self.accel
+
+
+class TrafficEnv(gym.Env):
+
+    def __init__(self, n_vehicles, av_penetration):
+        self.n_vehicles = n_vehicles
+        self.av_penetration = av_penetration
+
+    def step(self, action):
+        raise NotImplementedError
+
+    def reset(self):
+        raise NotImplementedError
+
+    @property
+    def observation_space(self):
+        return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(52,))
+
+    @property
+    def action_space(self):
+        return gym.spaces.Box(low=-np.inf, high=np.inf, shape=(1,))
+
+    def render(self, mode="human"):
+        """See parent class."""
+        pass
+
+    def get_data(self):
+        raise NotImplementedError
+
+    def compute_metrics(self):
+        x, v, a, _, _ = self.get_data()
+
+        # increment for AVs
+        incr = int(1 if self.av_penetration == 0 else 1 / self.av_penetration)
+        energy_model = PFM2019RAV4()
+        mpg = []
+        distance = []
+        for i in range(len(x)):
+            xi = np.array(x[i])
+            vi = np.array(v[i])
+            ai = np.array(a[i])
+
+            energy = energy_model.get_instantaneous_fuel_consumption(
+                speed=vi[:-1], grade=0., accel=ai)
+
+            distance.append(
+                (xi[-1] - xi[0]) / 1609.34)
+            mpg.append(
+                ((xi[-1] - xi[0]) / 1609.34) / (sum(energy) / 3600 * 0.1))
+
+        h = np.array(x[:-1:incr]) - np.array(x[1::incr]) - VEHICLE_LENGTH
+        v = np.array(v[1::incr])
+        th = h / np.clip(v, a_min=1, a_max=np.inf)
+        th = th.flatten()[v.flatten() >= 1]
+
+        ret = {
+            "vmt": np.mean(distance),
+            "mpg": np.mean(mpg),
+            "h_max": np.max(h),
+            "h_min": np.min(h),
+            "h_avg": np.mean(h),
+            "th_max": np.max(th),
+            "th_min": np.min(th),
+            "th_avg": np.mean(th),
+        }
+
+        if self.av_penetration > 0:
+            ret["av_mpg"] = np.mean(mpg[1::incr])
+
+        return ret
+
+    def gen_emission(self, emission_path):
+        x, v, a, _, dt = self.get_data()
+
+        data = {"id": [], "t": [], "x": [], "v": [], "a": []}
+        for i in range(len(x)):
+            xi = x[i]
+            vi = v[i]
+            ai = a[i]
+
+            for t in range(len(xi)):
+                data["id"].append(i)
+                data["t"].append(t * dt)
+                data["x"].append(xi[t])
+                data["v"].append(vi[t])
+                data["a"].append(ai[t] if t < len(ai) else 0.)
+
+        os.makedirs(emission_path, exist_ok=True)
+
+        pd.DataFrame.from_dict(data).to_csv(
+            os.path.join(emission_path, "trajectory.csv"), index=False)
+
+        self.plot_statistics(emission_path=emission_path)
+
+    def plot_statistics(self, emission_path=None):
+        x, v, _, v_des, dt = self.get_data()
+
+        times = list(np.arange(len(x[0])) * dt)
+
+        plt.figure(figsize=(16, 4))
+        for i in range(1, len(x), 10):
+            plt.plot(x[i], v[i])
+        plt.plot(x[0], v[0], c="k", lw=2, label="leader")
+        plt.legend(fontsize=15)
+        plt.xlim([0, np.max(x)])
+        plt.ylim([-0.025 * np.max(v), 1.025 * np.max(v)])
+        plt.grid(linestyle='--')
+        plt.xticks(fontsize=15)
+        plt.xlabel("Position (m)", fontsize=15)
+        plt.yticks(fontsize=15)
+        plt.ylabel("Speed (m/s)", fontsize=15)
+        if emission_path is not None:
+            plt.savefig(os.path.join(emission_path, "spatial.png"))
+        else:
+            plt.show()
+        plt.close()
+
+        plt.figure(figsize=(16, 4))
+        for i in range(1, len(x), 10):
+            plt.plot(times, v[i])
+        plt.plot(times, v[0], c="k", lw=2, label="leader")
+        plt.legend(fontsize=15)
+        plt.ylim([-0.025 * np.max(v), 1.025 * np.max(v)])
+        plt.grid(linestyle='--')
+        plt.xticks(fontsize=15)
+        plt.xlabel("Time (s)", fontsize=15)
+        plt.yticks(fontsize=15)
+        plt.ylabel("Speed (m/s)", fontsize=15)
+        if emission_path is not None:
+            plt.savefig(os.path.join(emission_path, "speed.png"))
+        else:
+            plt.show()
+        plt.close()
+
+        plt.figure(figsize=(16, 4))
+        times = list(np.arange(len(x[0])) * dt)
+        veh_increment = 10
+        for i in range(0, len(x), veh_increment):
+            plt.plot(times, np.array(x[i]) / 1000, c='k')
+        plt.grid(linestyle='--')
+        plt.ylim([0, 12])
+        plt.xticks(fontsize=15)
+        plt.xlabel("Time (s)", fontsize=15)
+        plt.yticks(fontsize=15)
+        plt.ylabel("Position (km)", fontsize=15)
+        if emission_path is not None:
+            plt.savefig(os.path.join(emission_path, "time_space.png"))
+        else:
+            plt.show()
+        plt.close()
+
+        if len(v_des) > 0:
+            plt.figure(figsize=(16, 4))
+            for i in range(len(v_des)):
+                plt.plot(v_des[i], c='k')
+            plt.grid(linestyle='--')
+            plt.xticks(fontsize=15)
+            plt.xlabel("Time (s)", fontsize=15)
+            plt.yticks(fontsize=15)
+            plt.ylabel("Desired speed (m/s)", fontsize=15)
+            if emission_path is not None:
+                plt.savefig(os.path.join(emission_path, "v_des.png"))
+            else:
+                plt.show()
+            plt.close()

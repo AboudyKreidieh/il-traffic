@@ -32,7 +32,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser(
         description="Parse argument used when running a imitation operation "
                     "on Flow environments.",
-        epilog="python imitate.py --env_name i210")
+        epilog="python imitate.py --env_name i24")
 
     # optional input parameters
     parser.add_argument(
@@ -64,7 +64,7 @@ def parse_args(args):
         '--env_name',
         type=str,
         default='highway',
-        help='the environment to run. One of {"highway", "i210", "i24"}')
+        help='the environment to run. One of {"bottleneck", "i24"}')
 
     # ======================================================================= #
     #                      Algorithm-specific parameters                      #
@@ -215,39 +215,10 @@ class Trainer(object):
 
         # Create the environment.
         if env_name == "i24":
-            from il_traffic.environments.trajectory_env import TrajectoryEnv
+            from il_traffic.environments.trajectory import TrajectoryEnv
             self.env = TrajectoryEnv()
-        elif env_name in ["highway", "i210"]:
-            from il_traffic.utils.flow_utils import create_env
-            from il_traffic.utils.flow_utils import get_base_env_params
-
-            network_params = dict(
-                inflow=2000,
-                end_speed=5,
-                penetration_rate=0.05,
-            )
-
-            environment_params = get_base_env_params(
-                network_type=env_name,
-                controller_type=1,  # imitate DownstreamController
-                save_video=False,
-                noise=0,
-            )
-            environment_params.update({
-                "warmup_path": os.path.join(
-                    config.PROJECT_PATH, "warmup/{}".format(env_name)),
-                'rl_penetration': 0.05,
-            })
-
-            self.env = create_env(
-                network_type=env_name,
-                network_params=network_params,
-                environment_params=environment_params,
-                render=False,
-                emission_path=None,
-                use_warmup=True,
-                training=True,
-            )
+        elif env_name == "bottleneck":
+            pass  # TODO
         elif env_name == "Pendulum-v0":
             from il_traffic.environments.gym_env import GymEnv
             self.env = GymEnv(env_name, self.device)

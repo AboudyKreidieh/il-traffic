@@ -9,8 +9,6 @@ from il_traffic.models.fcnet import FeedForwardModel
 from il_traffic.scripts.simulate import HIGHWAY_PARAMS
 from il_traffic.scripts.simulate import rollout
 from il_traffic.scripts.simulate import plot_results
-from il_traffic.utils.flow_utils import get_base_env_params
-from il_traffic.utils.flow_utils import create_env
 from il_traffic.utils.misc import ensure_dir
 
 
