@@ -39,7 +39,7 @@ class BottleneckEnv(TrafficEnv):
         # time counter
         self.t = 0
         # time horizon, in steps
-        self.horizon = 12000
+        self.horizon = 20000
         # equilibrium speed for a given density
         self.get_v_of_k = inversefunc(self.get_k_of_v)
 
@@ -207,7 +207,8 @@ class BottleneckEnv(TrafficEnv):
 
         if done:
             info.update(self.compute_metrics())
-            print("Done: {}".format(round(time.time() - self._t0, 2)))
+            print("\nDone. Simulation runtime: {} sec".format(
+                round(time.time() - self._t0, 2)))
 
         return next_obs, reward, done, info
 
@@ -392,13 +393,17 @@ class BottleneckEnv(TrafficEnv):
         return k
 
     def get_data(self):
-        """TODO."""
+        """Return data for saving, analysis, and plotting purposes."""
+        # number of datapoints to skip when saving. For efficiency purposes.
+        skip = 10
+
+        # Convert data to appropriate format for base class.
         if not self._inverted:
             self._inverted = True
-            self.x = list(np.c_[self.x[::10]].T)
-            self.v = list(np.c_[self.v[::10]].T)
-            self.a = list(np.c_[self.a[::10]].T)
+            self.x = list(np.c_[self.x[::skip]].T)
+            self.v = list(np.c_[self.v[::skip]].T)
+            self.a = list(np.c_[self.a[::skip]].T)
             if len(self.all_vdes) > 0:
-                self.all_vdes = list(np.c_[self.all_vdes[::10]].T)
+                self.all_vdes = list(np.c_[self.all_vdes[::skip]].T)
 
-        return self.x, self.v, self.a, self.all_vdes, 10 * self.dt
+        return self.x, self.v, self.a, self.all_vdes, skip * self.dt

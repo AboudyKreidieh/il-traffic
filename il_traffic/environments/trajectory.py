@@ -292,7 +292,8 @@ class TrajectoryEnv(TrafficEnv):
 
         if done:
             info.update(self.compute_metrics())
-            print("Done: {}".format(round(time.time() - self._t0, 2)))
+            print("\nDone. Simulation runtime: {} sec".format(
+                round(time.time() - self._t0, 2)))
 
         return next_obs, reward, done, info
 
@@ -375,5 +376,5 @@ class TrajectoryEnv(TrafficEnv):
         return [obs]
 
     def get_data(self):
-        """Return data for postprocessing and saving."""
+        """Return data for saving, analysis, and plotting purposes."""
         return self.x, self.v, self.a, self.all_vdes, self.dt

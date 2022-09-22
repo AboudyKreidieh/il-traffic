@@ -18,7 +18,7 @@ IDM_COEFFS = {
     "b": 2.0,
     "delta": 4.,
     "s0": 2.,
-    "noise": 0.3,  # 0.0,
+    "noise": 0.3,
 }
 # energy model parameters
 RAV4_2019_COEFFS = {
@@ -87,28 +87,27 @@ def get_h_eq(v, vl):
 class PFM2019RAV4(object):
 
     def __init__(self):
-        coeffs_dict = RAV4_2019_COEFFS
-        self.mass = coeffs_dict['mass']
-        self.state_coeffs = np.array([coeffs_dict['C0'],
-                                      coeffs_dict['C1'],
-                                      coeffs_dict['C2'],
-                                      coeffs_dict['C3'],
-                                      coeffs_dict['p0'],
-                                      coeffs_dict['p1'],
-                                      coeffs_dict['p2'],
-                                      coeffs_dict['q0'],
-                                      coeffs_dict['q1'],
-                                      coeffs_dict['z0'],
-                                      coeffs_dict['z1']])
-        self.beta0 = coeffs_dict['beta0']
-        self.vc = coeffs_dict['vc']
-        self.b1 = coeffs_dict['b1']
-        self.b2 = coeffs_dict['b2']
-        self.b3 = coeffs_dict['b3']
-        self.fuel_type = coeffs_dict['fuel_type']
+        self.mass = RAV4_2019_COEFFS['mass']
+        self.state_coeffs = np.array([RAV4_2019_COEFFS['C0'],
+                                      RAV4_2019_COEFFS['C1'],
+                                      RAV4_2019_COEFFS['C2'],
+                                      RAV4_2019_COEFFS['C3'],
+                                      RAV4_2019_COEFFS['p0'],
+                                      RAV4_2019_COEFFS['p1'],
+                                      RAV4_2019_COEFFS['p2'],
+                                      RAV4_2019_COEFFS['q0'],
+                                      RAV4_2019_COEFFS['q1'],
+                                      RAV4_2019_COEFFS['z0'],
+                                      RAV4_2019_COEFFS['z1']])
+        self.beta0 = RAV4_2019_COEFFS['beta0']
+        self.vc = RAV4_2019_COEFFS['vc']
+        self.b1 = RAV4_2019_COEFFS['b1']
+        self.b2 = RAV4_2019_COEFFS['b2']
+        self.b3 = RAV4_2019_COEFFS['b3']
+        self.fuel_type = RAV4_2019_COEFFS['fuel_type']
 
     def get_instantaneous_fuel_consumption(self, accel, speed, grade):
-        accel_plus = np.clip(accel, a_min=0, a_max=np.inf)
+        accel_plus = np.maximum(accel, 0)
         state_variables = np.array([1,
                                     speed,
                                     speed**2,
@@ -344,10 +343,11 @@ class TrafficEnv(gym.Env):
         pass
 
     def get_data(self):
+        """Return data for saving, analysis, and plotting purposes."""
         raise NotImplementedError
 
     def compute_metrics(self):
-        x, v, a, _, _ = self.get_data()
+        x, v, a, _, dt = self.get_data()
 
         # increment for AVs
         incr = int(1 if self.av_penetration == 0 else 1 / self.av_penetration)
@@ -360,12 +360,12 @@ class TrafficEnv(gym.Env):
             ai = np.array(a[i])
 
             energy = energy_model.get_instantaneous_fuel_consumption(
-                speed=vi[:-1], grade=0., accel=ai)
+                speed=vi[1:], grade=0., accel=ai)
 
             distance.append(
                 (xi[-1] - xi[0]) / 1609.34)
             mpg.append(
-                ((xi[-1] - xi[0]) / 1609.34) / (sum(energy) / 3600 * 0.1))
+                ((xi[-1] - xi[0]) / 1609.34) / (sum(energy) / 3600 * dt))
 
         h = np.array(x[:-1:incr]) - np.array(x[1::incr]) - VEHICLE_LENGTH
         v = np.array(v[1::incr])

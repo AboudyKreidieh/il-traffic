@@ -81,11 +81,14 @@ def main(args):
 
     # Run the simulation.
     done = False
+    info = {}
     while not done:
-        _, _, done, _ = env.step(action=None)
+        _, _, done, info = env.step(action=None)
 
     # Compute/display statistics.
-    pass  # TODO
+    for key in info.keys():
+        if key != "expert_action":
+            print(key, info[key])
 
     # Generate emission files.
     env.gen_emission(dir_name)
