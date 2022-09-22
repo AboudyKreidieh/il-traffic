@@ -418,24 +418,6 @@ class TrafficEnv(gym.Env):
 
         plt.figure(figsize=(16, 4))
         for i in range(1, len(x), 10):
-            plt.plot(x[i], v[i])
-        plt.plot(x[0], v[0], c="k", lw=2, label="leader")
-        plt.legend(fontsize=15)
-        plt.xlim([0, np.max(x)])
-        plt.ylim([-0.025 * np.max(v), 1.025 * np.max(v)])
-        plt.grid(linestyle='--')
-        plt.xticks(fontsize=15)
-        plt.xlabel("Position (m)", fontsize=15)
-        plt.yticks(fontsize=15)
-        plt.ylabel("Speed (m/s)", fontsize=15)
-        if emission_path is not None:
-            plt.savefig(os.path.join(emission_path, "spatial.png"))
-        else:
-            plt.show()
-        plt.close()
-
-        plt.figure(figsize=(16, 4))
-        for i in range(1, len(x), 10):
             plt.plot(times, v[i])
         plt.plot(times, v[0], c="k", lw=2, label="leader")
         plt.legend(fontsize=15)

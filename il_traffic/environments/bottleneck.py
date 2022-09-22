@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import math
 from pynverse import inversefunc
 
 from il_traffic.environments.traffic import TrafficEnv
@@ -212,14 +213,45 @@ class BottleneckEnv(TrafficEnv):
 
         return next_obs, reward, done, info
 
+    @staticmethod
+    def _get_idm_accel(v, vl, h, dt):
+        n_veh = len(v)
+        v0 = IDM_COEFFS["v0"]
+        T = IDM_COEFFS["T"]
+        a = IDM_COEFFS["a"]
+        b = IDM_COEFFS["b"]
+        delta = IDM_COEFFS["delta"]
+        s0 = IDM_COEFFS["s0"]
+        noise = IDM_COEFFS["noise"]
+
+        s_star = s0 + np.clip(
+            v * T + v * (v - vl) / (2 * math.sqrt(a * b)),
+            a_min=0, a_max=np.inf)
+
+        accel = a * (1 - (v / v0) ** delta - (s_star / h) ** 2)
+
+        if noise > 0:
+            accel += math.sqrt(dt) * np.random.randn(n_veh) * noise
+
+        # Make sure speed is not negative.
+        accel = np.clip(accel, a_min=-v/dt, a_max=np.inf)
+
+        return accel
+
     def get_human_accel(self):
         """Return accelerations for vehicles if they were humans."""
         # current state information
         x_t = self.x[-1]
         v_t = self.v[-1]
 
-        # Add acceleration of the leader (it doesn't oscillate).
-        a_t = [0.]
+        # Add acceleration of the leader (it doesn't oscillate) and the
+        # vehicles following it.
+        a_t = [0.] + list(self._get_idm_accel(
+            v=v_t[1:],
+            vl=v_t[:-1],
+            h=x_t[:-1] - x_t[1:] - VEHICLE_LENGTH,
+            dt=self.dt,
+        ))
 
         # Density in veh/meter (ignoring the lead vehicle)
         n_veh = np.sum((BN_START <= x_t[1:]) & (x_t[1:] <= BN_END))
@@ -235,16 +267,12 @@ class BottleneckEnv(TrafficEnv):
         else:
             sl = IDM_COEFFS["v0"]
 
-        # accelerations for subsequent vehicles
-        for v, vl, x, xl in zip(v_t[1:], v_t[:-1], x_t[1:], x_t[:-1]):
-            if BN_START <= x <= BN_END and v >= sl:
-                # Force vehicles to slow down in the bottleneck if their
-                # current speed is higher than the speed limit.
-                a_t.append(-1.)
-            else:
-                # Get human-driver model accelerations.
-                a_t.append(get_idm_accel(
-                    v=v, vl=vl, h=xl - x - VEHICLE_LENGTH, dt=self.dt))
+        # Force vehicles to slow down in the bottleneck if their
+        # current speed is higher than the speed limit.
+        for i in np.where(
+                (x_t >= BN_START) & (x_t <= BN_END) & (v_t >= sl))[0]:
+            if i != 0:
+                a_t[i] = -1.
 
         a_t = np.array(a_t, dtype=np.float32)
 
