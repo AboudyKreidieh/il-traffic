@@ -6,8 +6,6 @@ from pynverse import inversefunc
 from il_traffic.environments.traffic import TrafficEnv
 from il_traffic.environments.traffic import IDM_COEFFS
 from il_traffic.environments.traffic import VEHICLE_LENGTH
-from il_traffic.environments.traffic import get_h_eq
-from il_traffic.environments.traffic import get_idm_accel
 from il_traffic.environments.traffic import NonLocalTrafficFLowHarmonizer
 
 
@@ -274,9 +272,7 @@ class BottleneckEnv(TrafficEnv):
             if i != 0:
                 a_t[i] = -1.
 
-        a_t = np.array(a_t, dtype=np.float32)
-
-        return a_t
+        return np.array(a_t, dtype=np.float32)
 
     def get_av_accel(self, action):
         """Convert actions to a desired acceleration."""
@@ -399,10 +395,10 @@ class BottleneckEnv(TrafficEnv):
         """TODO."""
         if not self._inverted:
             self._inverted = True
-            self.x = list(np.c_[self.x].T)
-            self.v = list(np.c_[self.v].T)
-            self.a = list(np.c_[self.a].T)
+            self.x = list(np.c_[self.x[::10]].T)
+            self.v = list(np.c_[self.v[::10]].T)
+            self.a = list(np.c_[self.a[::10]].T)
             if len(self.all_vdes) > 0:
-                self.all_vdes = list(np.c_[self.all_vdes].T)
+                self.all_vdes = list(np.c_[self.all_vdes[::10]].T)
 
-        return self.x, self.v, self.a, self.all_vdes, self.dt
+        return self.x, self.v, self.a, self.all_vdes, 10 * self.dt
