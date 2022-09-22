@@ -112,7 +112,7 @@ class BottleneckEnv(TrafficEnv):
 
         # Define initial state.
         h_eq = 1.1 * v0  # get_h_eq(v=v0, vl=v0)
-        x_init = 10000 - (h_eq + VEHICLE_LENGTH) * np.arange(
+        x_init = BN_START - (h_eq + VEHICLE_LENGTH) * np.arange(
             self.n_vehicles, dtype=np.float32)
         v_init = v0 * np.ones(self.n_vehicles, dtype=np.float32)
         self.x.append(x_init)
