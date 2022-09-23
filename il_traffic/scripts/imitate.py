@@ -63,7 +63,7 @@ def parse_args(args):
     parser.add_argument(
         '--env_name',
         type=str,
-        default='highway',
+        default='i24',
         help='the environment to run. One of {"bottleneck", "i24"}')
 
     # ======================================================================= #
@@ -216,9 +216,10 @@ class Trainer(object):
         # Create the environment.
         if env_name == "i24":
             from il_traffic.environments.trajectory import TrajectoryEnv
-            self.env = TrajectoryEnv()
+            self.env = TrajectoryEnv(n_vehicles=200, av_penetration=0.04)
         elif env_name == "bottleneck":
-            pass  # TODO
+            from il_traffic.environments.bottleneck import BottleneckEnv
+            self.env = BottleneckEnv(n_vehicles=1400, av_penetration=0.04)
         elif env_name == "Pendulum-v0":
             from il_traffic.environments.gym_env import GymEnv
             self.env = GymEnv(env_name, self.device)
@@ -298,7 +299,7 @@ class Trainer(object):
                     s2, r, done, info = self.env.step(ac)
                     ep_rew.append(r)
 
-                    # Store sample.
+                    # Store sample.  TODO
                     self.alg.add_sample(
                         obs=s,
                         action=ac,

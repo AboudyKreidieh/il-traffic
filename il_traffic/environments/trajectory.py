@@ -164,7 +164,7 @@ class TrajectoryEnv(TrafficEnv):
 
             self.a.append([])
             self.v.append([v_eq])
-            self.x.append([x_leader[0] - h_eq])
+            self.x.append([x_leader[0] - h_eq - VEHICLE_LENGTH])
             self.all_vdes.append([])
 
             # Reset expert controller and memory.
@@ -263,7 +263,7 @@ class TrajectoryEnv(TrafficEnv):
                 x_leader = self.x[-1]
                 v_leader = self.v[-1]
                 v_eq = v_leader[0]
-                h_eq = get_h_eq(v=v_eq, vl=v_leader[0])
+                h_eq = 3.0 * v_eq
 
                 self.a.append([])
                 self.v.append([v_eq])
@@ -302,7 +302,7 @@ class TrajectoryEnv(TrafficEnv):
         # failsafe parameters
         h_min = 5.
         tau = 5.
-        th_min = 0.5
+        th_min = 0.5  # TODO: 1.0
 
         t = len(self.x[-1]) - 1
         x_t = self.x[-1][-1]
@@ -320,7 +320,7 @@ class TrajectoryEnv(TrafficEnv):
             a_lead = 0.
 
         # Get desired speed from action.
-        v_des = v_t + action[0][0]
+        v_des = min(35., v_t + action[0][0])  # TODO: 40.
 
         # Update desired speed based on safety.
         v_des = max(0., min(

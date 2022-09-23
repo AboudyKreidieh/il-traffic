@@ -81,7 +81,7 @@ class DAgger(ILAlgorithm):
             weight_decay=self.l2_penalty)
 
         # Create the loss function.
-        self._loss_fn = nn.MSELoss()
+        self._loss_fn = nn.HuberLoss()  # TODO: nn.MSELoss()
 
     def save(self, log_dir, epoch):
         """See parent class."""
@@ -143,9 +143,11 @@ class DAgger(ILAlgorithm):
             indices = list(range(nsamples))
             random.shuffle(indices)
 
-            for i in range(10):
-                ix0 = (nsamples // 10) * i
-                ix1 = ix0 + nsamples // 10
+            # Perform n different training operations.
+            n_itrs = 10  # TODO: more?
+            for i in range(n_itrs):
+                ix0 = (nsamples // n_itrs) * i
+                ix1 = ix0 + nsamples // n_itrs
                 batch_i = indices[ix0:ix1]
                 obs = FloatTensor(np.array([
                     self.samples["obs"][i] for i in batch_i]))
