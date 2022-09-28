@@ -5,16 +5,15 @@ Usage
 """
 import sys
 import argparse
-from time import strftime
-
 import warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning)
-
 import numpy as np
-warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+from time import strftime
 
 from il_traffic.environments.trajectory import TrajectoryEnv
 from il_traffic.environments.bottleneck import BottleneckEnv
+
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 
 def parse_args(args):
@@ -97,7 +96,7 @@ def main(args):
             print(key, info[key])
 
     # Generate emission files.
-    env.gen_emission(dir_name)
+    env.gen_emission(flags.network_type, dir_name)
 
 
 if __name__ == "__main__":

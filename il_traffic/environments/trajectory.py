@@ -7,7 +7,7 @@ import json
 
 import il_traffic.config as config
 from il_traffic.environments.traffic import TrafficEnv
-from il_traffic.environments.traffic import VEHICLE_LENGTH
+from il_traffic.environments.traffic import get_idm_coeff
 from il_traffic.environments.traffic import get_idm_accel
 from il_traffic.environments.traffic import get_h_eq
 from il_traffic.environments.traffic import NonLocalTrafficFLowHarmonizer
@@ -47,9 +47,11 @@ def get_inrix_from_dir(directory):
 
 
 def get_idm_trajectory(x_leader, v_leader, dt, delay):
+    coeff = get_idm_coeff(network_type="i24")
+
     # Choose an initial position at the equilibrium.
     v_eq = v_leader[0]
-    h_eq = get_h_eq(v=v_eq, vl=v_leader[0])
+    h_eq = get_h_eq(v=v_eq, vl=v_leader[0], network_type="i24")
 
     # Set initial positions.
     a_ego = []
@@ -63,9 +65,9 @@ def get_idm_trajectory(x_leader, v_leader, dt, delay):
         x = x_ego[-1]
         v = v_ego[-1]
         vl = v_leader[t_delay]
-        h = x_leader[t_delay] - x_ego[-1] - VEHICLE_LENGTH
+        h = x_leader[t_delay] - x_ego[-1] - coeff["vlength"]
 
-        a_tp1 = get_idm_accel(v, vl, h, dt)
+        a_tp1 = get_idm_accel(v, vl, h, dt, network_type="i24")
         v_tp1 = v + a_tp1*dt
         x_tp1 = x + v*dt + 0.5*a_tp1*dt**2
 
@@ -84,6 +86,8 @@ class TrajectoryEnv(TrafficEnv):
             av_penetration=av_penetration,
         )
 
+        # car-following model coefficients
+        self.coeff = get_idm_coeff(network_type="i24")
         # runtime start
         self._t0 = 0.
         # simulation step size
@@ -160,11 +164,11 @@ class TrajectoryEnv(TrafficEnv):
         if _add_av and self.av_penetration > 0:
             # Place an automated vehicle.
             v_eq = v_leader[0]
-            h_eq = get_h_eq(v=v_eq, vl=v_leader[0])
+            h_eq = get_h_eq(v=v_eq, vl=v_leader[0], network_type="i24")
 
             self.a.append([])
             self.v.append([v_eq])
-            self.x.append([x_leader[0] - h_eq - VEHICLE_LENGTH])
+            self.x.append([x_leader[0] - h_eq - self.coeff["vlength"]])
             self.all_vdes.append([])
 
             # Reset expert controller and memory.
@@ -207,7 +211,7 @@ class TrajectoryEnv(TrafficEnv):
             expert_accel = self.expert.get_accel(
                 v=v_av[t],
                 vl=v_leader[t],
-                h=x_leader[t] - x_av[t] - VEHICLE_LENGTH,
+                h=x_leader[t] - x_av[t] - self.coeff["vlength"],
                 x=x_av[t],
                 x_seg=self.x_seg,
                 v_seg=self.v_seg[ix_t],
@@ -267,7 +271,7 @@ class TrajectoryEnv(TrafficEnv):
 
                 self.a.append([])
                 self.v.append([v_eq])
-                self.x.append([x_leader[0] - h_eq - VEHICLE_LENGTH])
+                self.x.append([x_leader[0] - h_eq - self.coeff["vlength"]])
                 self.all_vdes.append([])
 
                 # Reset expert controller and memory.
@@ -275,7 +279,9 @@ class TrajectoryEnv(TrafficEnv):
                 self.prev_accel = 0.
 
         # Check for a collision.
-        h_t = self.x[-2][len(self.x[-1]) - 1] - self.x[-1][-1] - VEHICLE_LENGTH
+        h_t = self.x[-2][len(self.x[-1]) - 1] - \
+            self.x[-1][-1] - self.coeff["vlength"]
+
         if np.any(h_t <= 0):
             print("Collision")
             done = True
@@ -291,7 +297,7 @@ class TrajectoryEnv(TrafficEnv):
         info = {"expert_action": [np.array([expert_action])]}
 
         if done:
-            info.update(self.compute_metrics())
+            info.update(self.compute_metrics(network_type="i24"))
             print("\nDone. Simulation runtime: {} sec".format(
                 round(time.time() - self._t0, 2)))
 
@@ -309,7 +315,7 @@ class TrajectoryEnv(TrafficEnv):
         v_t = self.v[-1][-1]
         xl_t = self.x[-2][t]
         vl_t = self.v[-2][t]
-        h_t = xl_t - x_t - VEHICLE_LENGTH
+        h_t = xl_t - x_t - self.coeff["vlength"]
 
         # approximation for leader acceleration
         t0 = max(0, t - 50)
@@ -346,8 +352,7 @@ class TrajectoryEnv(TrafficEnv):
 
         return accel
 
-    @staticmethod
-    def get_state(x_av, v_av, x_leader, v_leader):
+    def get_state(self, x_av, v_av, x_leader, v_leader):
         """Return the agent's observation.
 
         This observation consists of:
@@ -357,6 +362,7 @@ class TrajectoryEnv(TrafficEnv):
         3. Previous desired speed
         4. History of leader's speeds
         """
+        # failsafe parameters
         history_length = 50
         speed_scale = 40.
         h_scale = 100.
@@ -366,7 +372,7 @@ class TrajectoryEnv(TrafficEnv):
 
         x_t = x_av[-1]
         v_t = v_av[-1]
-        h_t = x_leader[t-1] - x_t - VEHICLE_LENGTH
+        h_t = x_leader[t-1] - x_t - self.coeff["vlength"]
 
         obs = np.array(
             [h_t / h_scale, v_t / speed_scale]

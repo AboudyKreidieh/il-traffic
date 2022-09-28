@@ -4,8 +4,7 @@ import math
 from pynverse import inversefunc
 
 from il_traffic.environments.traffic import TrafficEnv
-from il_traffic.environments.traffic import IDM_COEFFS
-from il_traffic.environments.traffic import VEHICLE_LENGTH
+from il_traffic.environments.traffic import get_idm_coeff
 from il_traffic.environments.traffic import NonLocalTrafficFLowHarmonizer
 
 
@@ -26,6 +25,8 @@ class BottleneckEnv(TrafficEnv):
             av_penetration=av_penetration,
         )
 
+        # car-following model coefficients
+        self.coeff = get_idm_coeff(network_type="bottleneck")
         # memorization for speed limit for different densities
         self._sl = {}
         # use in get_data only
@@ -101,7 +102,7 @@ class BottleneckEnv(TrafficEnv):
         self._inverted = False
 
         # Initial speed of all vehicles
-        v0 = IDM_COEFFS["v0"] - 5  # TODO
+        v0 = self.coeff["v0"] - 5  # TODO
 
         # Clear data from previous runs.
         self.x = []
@@ -112,7 +113,7 @@ class BottleneckEnv(TrafficEnv):
 
         # Define initial state.
         h_eq = 1.1 * v0  # get_h_eq(v=v0, vl=v0)
-        x_init = BN_START - (h_eq + VEHICLE_LENGTH) * np.arange(
+        x_init = BN_START - (h_eq + self.coeff["vlength"]) * np.arange(
             self.n_vehicles, dtype=np.float32)
         v_init = v0 * np.ones(self.n_vehicles, dtype=np.float32)
         self.x.append(x_init)
@@ -126,13 +127,14 @@ class BottleneckEnv(TrafficEnv):
             self.prev_accel = np.zeros(n_avs)
 
             # Get initial state.
-            state = self.get_state()
+            av_indices = self._get_indices()
+            state = self.get_state(av_indices)
         else:
             state = []
 
         return state
 
-    def step(self, action):  # TODO: control vehicles in a range
+    def step(self, action):
         """See parent class.
 
         Note that, if action is set to None, accelerations for the AVs will be
@@ -149,7 +151,7 @@ class BottleneckEnv(TrafficEnv):
             # Update traffic state estimation data.
             self.update_tse()
 
-            av_indices = self.av_indices[(0 <= x_t) & (x_t <= BN_START)]
+            av_indices = self._get_indices()
             experts = []
             for ix, expert in zip(self.av_indices, self.expert):
                 if 0 <= x_t[ix] <= BN_START:
@@ -159,7 +161,7 @@ class BottleneckEnv(TrafficEnv):
             expert_accel = [expert.get_accel(
                 v=v_t[ix],
                 vl=v_t[ix-1],
-                h=x_t[ix-1] - x_t[ix] - VEHICLE_LENGTH,
+                h=x_t[ix-1] - x_t[ix] - self.coeff["vlength"],
                 x=x_t[ix],
                 x_seg=self.x_seg,
                 v_seg=self.v_seg,
@@ -201,33 +203,45 @@ class BottleneckEnv(TrafficEnv):
         done = self.t == self.horizon
 
         # Check for a collision
-        h_t = x_tp1[1:] - x_tp1[:-1] - VEHICLE_LENGTH
-        if any(h_t) <= 0:
+        h_t = x_tp1[:-1] - x_tp1[1:] - self.coeff["vlength"]
+        if any(h_t <= 0):
             print("Collision")
             done = True
 
+        # Update the current list of AV indices.
+        av_indices = self._get_indices()
+
+        # Skip simulation steps with no AV.
+        if (self.av_penetration > 0) and (not done and len(av_indices) == 0):
+            next_obs, reward, done, info = self.step(action=None)
+
         # Return state and expert action.
-        next_obs = self.get_state()
+        av_indices = self._get_indices()
+        next_obs = self.get_state(av_indices)
         reward = 0.
         info = {"expert_action": expert_action}
 
         if done:
-            info.update(self.compute_metrics())
+            info.update(self.compute_metrics(network_type="bottleneck"))
             print("\nDone. Simulation runtime: {} sec".format(
                 round(time.time() - self._t0, 2)))
 
         return next_obs, reward, done, info
 
-    @staticmethod
-    def _get_idm_accel(v, vl, h, dt):
+    def _get_indices(self):
+        # Return the indices of AVs after position 0 and before the bottleneck.
+        x_t = self.x[-1][self.av_indices]
+        return self.av_indices[(0 <= x_t) & (x_t <= BN_START)]
+
+    def _get_idm_accel(self, v, vl, h, dt):
         n_veh = len(v)
-        v0 = IDM_COEFFS["v0"]
-        T = IDM_COEFFS["T"]
-        a = IDM_COEFFS["a"]
-        b = IDM_COEFFS["b"]
-        delta = IDM_COEFFS["delta"]
-        s0 = IDM_COEFFS["s0"]
-        noise = IDM_COEFFS["noise"]
+        v0 = self.coeff["v0"]
+        T = self.coeff["T"]
+        a = self.coeff["a"]
+        b = self.coeff["b"]
+        delta = self.coeff["delta"]
+        s0 = self.coeff["s0"]
+        noise = self.coeff["noise"]
 
         s_star = s0 + np.clip(
             v * T + v * (v - vl) / (2 * math.sqrt(a * b)),
@@ -254,7 +268,7 @@ class BottleneckEnv(TrafficEnv):
         a_t = [0.] + list(self._get_idm_accel(
             v=v_t[1:],
             vl=v_t[:-1],
-            h=x_t[:-1] - x_t[1:] - VEHICLE_LENGTH,
+            h=x_t[:-1] - x_t[1:] - self.coeff["vlength"],
             dt=self.dt,
         ))
 
@@ -270,7 +284,7 @@ class BottleneckEnv(TrafficEnv):
                 sl = self.get_v_of_k(k_bn) * BN_COEFF
                 self._sl[n_veh] = sl
         else:
-            sl = IDM_COEFFS["v0"]
+            sl = self.coeff["v0"]
 
         # Force vehicles to slow down in the bottleneck if their
         # current speed is higher than the speed limit.
@@ -298,7 +312,7 @@ class BottleneckEnv(TrafficEnv):
         v_t = self.v[-1][av_indices]
         xl_t = self.x[-1][av_indices - 1]
         vl_t = self.v[-1][av_indices - 1]
-        h_t = xl_t - x_t - VEHICLE_LENGTH
+        h_t = xl_t - x_t - self.coeff["vlength"]
 
         # approximation for leader acceleration
         t0 = max(0, self.t - int(tau / self.dt))
@@ -361,7 +375,7 @@ class BottleneckEnv(TrafficEnv):
         v_t = self.v[-1][av_indices]
         xl_t = self.x[-1][av_indices - 1]
         vl_t = [self.v[ti][av_indices - 1] for ti in range(t0, t)]
-        h_t = xl_t - x_t - VEHICLE_LENGTH
+        h_t = xl_t - x_t - self.coeff["vlength"]
 
         obs = []
         for i in range(n_avs):
@@ -394,15 +408,14 @@ class BottleneckEnv(TrafficEnv):
             self.v_seg = np.array(
                 [np.mean(s) for s in speeds], dtype=np.float32)
 
-    @staticmethod
-    def get_k_of_v(v):
+    def get_k_of_v(self, v):
         """Get the density of the speed using IDM equilibrium."""
-        T = IDM_COEFFS["T"]
-        delta = IDM_COEFFS["delta"]
-        s0 = IDM_COEFFS["s0"]
-        v0 = IDM_COEFFS["v0"]
+        T = self.coeff["T"]
+        delta = self.coeff["delta"]
+        s0 = self.coeff["s0"]
+        v0 = self.coeff["v0"]
         s = (s0 + T * v) / (1 - (v / v0) ** delta) ** (1 / 2)
-        k = 1 / (s + VEHICLE_LENGTH)
+        k = 1 / (s + self.coeff["vlength"])
         return k
 
     def get_data(self):

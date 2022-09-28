@@ -8,18 +8,6 @@ import numpy as np
 from copy import deepcopy
 from collections import deque
 
-# vehicle length, in meters
-VEHICLE_LENGTH = 5.  # 4. TODO
-# car-following parameters
-IDM_COEFFS = {
-    "v0": 45,  # 33, TODO
-    "T": 1.,
-    "a": 1.3,
-    "b": 2.0,
-    "delta": 4.,
-    "s0": 2.,
-    "noise": 0.0,  # 0.3
-}
 # energy model parameters
 RAV4_2019_COEFFS = {
     'beta0': 0.013111753095302022,
@@ -49,14 +37,36 @@ GRAMS_PER_SEC_TO_GALS_PER_HOUR = {
 }
 
 
-def get_idm_accel(v, vl, h, dt):
-    v0 = IDM_COEFFS["v0"]
-    T = IDM_COEFFS["T"]
-    a = IDM_COEFFS["a"]
-    b = IDM_COEFFS["b"]
-    delta = IDM_COEFFS["delta"]
-    s0 = IDM_COEFFS["s0"]
-    noise = IDM_COEFFS["noise"]
+def get_idm_coeff(network_type):
+    assert network_type in ["i24", "bottleneck"]
+
+    coeff = {
+        "v0": 33,
+        "T": 1.,
+        "a": 1.3,
+        "b": 2.0,
+        "delta": 4.,
+        "s0": 2.,
+        "noise": 0.0,  # 0.3
+        "vlength": 4.,
+    }
+
+    if network_type == "i24":
+        coeff["v0"] = 45.
+        coeff["vlength"] = 5.
+
+    return coeff
+
+
+def get_idm_accel(v, vl, h, dt, network_type):
+    coeff = get_idm_coeff(network_type)
+    v0 = coeff["v0"]
+    T = coeff["T"]
+    a = coeff["a"]
+    b = coeff["b"]
+    delta = coeff["delta"]
+    s0 = coeff["s0"]
+    noise = coeff["noise"]
 
     s_star = s0 + max(0, v*T + v*(v-vl) / (2*math.sqrt(a*b)))
 
@@ -71,13 +81,14 @@ def get_idm_accel(v, vl, h, dt):
     return accel
 
 
-def get_h_eq(v, vl):
-    v0 = IDM_COEFFS["v0"]
-    T = IDM_COEFFS["T"]
-    a = IDM_COEFFS["a"]
-    b = IDM_COEFFS["b"]
-    delta = IDM_COEFFS["delta"]
-    s0 = IDM_COEFFS["s0"]
+def get_h_eq(v, vl, network_type):
+    coeff = get_idm_coeff(network_type)
+    v0 = coeff["v0"]
+    T = coeff["T"]
+    a = coeff["a"]
+    b = coeff["b"]
+    delta = coeff["delta"]
+    s0 = coeff["s0"]
 
     s_star = s0 + max(0, v*T + v*(v-vl) / (2*math.sqrt(a*b)))
 
@@ -346,7 +357,9 @@ class TrafficEnv(gym.Env):
         """Return data for saving, analysis, and plotting purposes."""
         raise NotImplementedError
 
-    def compute_metrics(self):
+    def compute_metrics(self, network_type):
+        assert network_type in ["i24", "bottleneck"]
+
         x, v, a, _, dt = self.get_data()
 
         # increment for AVs
@@ -355,24 +368,32 @@ class TrafficEnv(gym.Env):
         mpg = []
         distance = []
         for i in range(len(x)):
-            xi = x[i] = np.array(x[i])#[:-1]  TODO
-            vi = v[i] = np.array(v[i])#[:-1]
             ai = a[i] = np.array(a[i])
+            xi = x[i] = np.array(x[i])[:len(ai)]
+            vi = v[i] = np.array(v[i])[:len(ai)]
 
-            # Remove outside of bounds.  TODO
-            # xmin = 0
-            # xmax = 12000
-            # vi = vi[(xmin <= xi) & (xi <= xmax)]
-            # ai = ai[(xmin <= xi) & (xi <= xmax)]
-            # xi = xi[(xmin <= xi) & (xi <= xmax)]
+            # Remove outside of bounds.
+            if network_type == "bottleneck":
+                xmin = 0
+                xmax = 12000
+            else:
+                xmin = -float("inf")  # TODO: 0
+                xmax = float("inf")
+
+            vi = vi[(xmin <= xi) & (xi <= xmax)]
+            ai = ai[(xmin <= xi) & (xi <= xmax)]
+            xi = xi[(xmin <= xi) & (xi <= xmax)]
 
             energy = energy_model.get_instantaneous_fuel_consumption(
-                speed=vi[:-1], grade=0., accel=ai)
+                speed=vi, grade=0., accel=ai)
 
-            distance.append(
-                (xi[-1] - xi[0]) / 1609.34)
-            mpg.append(
-                ((xi[-1] - xi[0]) / 1609.34) / (sum(energy) / 3600 * dt))
+            if len(xi) == 0:
+                distance.append(0)
+                mpg.append(0)
+            else:
+                dist = (xi[-1] - xi[0]) / 1609.34
+                distance.append(dist)
+                mpg.append(dist / (sum(energy) / 3600 * dt))
 
         n_vehicles = len(v)
         h = []
@@ -384,8 +405,9 @@ class TrafficEnv(gym.Env):
             m = len(x[i])
 
             # Collect and store relevant data.
+            coeff = get_idm_coeff(network_type)
             speed.extend(v[i])
-            h_i = x[i-1][:min(n, m)] - x[i] - VEHICLE_LENGTH
+            h_i = x[i-1][:min(n, m)] - x[i] - coeff["vlength"]
             h.extend(list(h_i))
             th_i = h_i / np.clip(v[i], a_min=1, a_max=np.inf)
             th.extend(list(th_i.flatten()[v[i].flatten() >= 1]))
@@ -406,7 +428,7 @@ class TrafficEnv(gym.Env):
 
         return ret
 
-    def gen_emission(self, emission_path):
+    def gen_emission(self, network_type, emission_path):
         x, v, a, _, dt = self.get_data()
 
         data = {"id": [], "t": [], "x": [], "v": [], "a": []}
@@ -427,9 +449,9 @@ class TrafficEnv(gym.Env):
         pd.DataFrame.from_dict(data).to_csv(
             os.path.join(emission_path, "trajectory.csv"), index=False)
 
-        self.plot_statistics(emission_path=emission_path)
+        self.plot_statistics(network_type, emission_path)
 
-    def plot_statistics(self, emission_path=None):
+    def plot_statistics(self, network_type, emission_path=None):
         x, v, _, v_des, dt = self.get_data()
 
         times = list(np.arange(len(x[0])) * dt)
@@ -457,7 +479,10 @@ class TrafficEnv(gym.Env):
         for i in range(0, len(x), veh_increment):
             plt.plot(times, np.array(x[i]) / 1000, c='k')
         plt.grid(linestyle='--')
-        plt.ylim([0, 12])
+        if network_type == "bottleneck":
+            plt.ylim([0, 12])
+        # else:  TODO
+        #     plt.ylim([0, max([max(x[i] for i in range(len(x)))])])
         plt.xticks(fontsize=15)
         plt.xlabel("Time (s)", fontsize=15)
         plt.yticks(fontsize=15)
