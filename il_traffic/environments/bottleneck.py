@@ -132,7 +132,7 @@ class BottleneckEnv(TrafficEnv):
 
         return state
 
-    def step(self, action):
+    def step(self, action):  # TODO: control vehicles in a range
         """See parent class.
 
         Note that, if action is set to None, accelerations for the AVs will be
@@ -149,10 +149,10 @@ class BottleneckEnv(TrafficEnv):
             # Update traffic state estimation data.
             self.update_tse()
 
-            av_indices, experts = [], []
+            av_indices = self.av_indices[(0 <= x_t) & (x_t <= BN_START)]
+            experts = []
             for ix, expert in zip(self.av_indices, self.expert):
-                if 0 <= x_t[ix] <= 10000:
-                    av_indices.append(ix)
+                if 0 <= x_t[ix] <= BN_START:
                     experts.append(expert)
 
             # Get expert accelerations.
@@ -177,7 +177,7 @@ class BottleneckEnv(TrafficEnv):
 
             # Get automated vehicle accelerations.
             if action is not None:
-                a_av = self.get_av_accel(action)
+                a_av = self.get_av_accel(action, av_indices)
             else:
                 a_av = expert_accel
 
@@ -281,9 +281,12 @@ class BottleneckEnv(TrafficEnv):
 
         return np.array(a_t, dtype=np.float32)
 
-    def get_av_accel(self, action):
+    def get_av_accel(self, action,  av_indices):
         """Convert actions to a desired acceleration."""
-        n_avs = len(self.av_indices)
+        n_avs = len(av_indices)
+
+        # Make sure actions is of the same size.
+        assert action.shape == (n_avs, 1)
 
         # failsafe parameters
         h_min = 5.
@@ -291,23 +294,25 @@ class BottleneckEnv(TrafficEnv):
         th_min = 0.5
 
         # current state information
-        x_t = self.x[-1][self.av_indices]
-        v_t = self.v[-1][self.av_indices]
-        xl_t = self.x[-1][self.av_indices + 1]
-        vl_t = self.v[-1][self.av_indices + 1]
+        x_t = self.x[-1][av_indices]
+        v_t = self.v[-1][av_indices]
+        xl_t = self.x[-1][av_indices - 1]
+        vl_t = self.v[-1][av_indices - 1]
         h_t = xl_t - x_t - VEHICLE_LENGTH
 
         # approximation for leader acceleration
-        t0 = max(0, self.t - 50)
+        t0 = max(0, self.t - int(tau / self.dt))
         if self.t - t0 > 0:
             a_lead = min(
-                0., (self.v[-1][self.av_indices] -
-                     self.v[t0][self.av_indices]) / (self.dt * (self.t - t0)))
+                0., (self.v[-1][av_indices] -
+                     self.v[t0][av_indices]) / (self.dt * (self.t - t0)))
         else:
             a_lead = np.zeros(n_avs, dtype=np.float32)
 
         # Get desired speed from action.
-        v_des = v_t + np.flatten(action)
+        v_des = v_t + action.flatten()
+
+        assert v_des.shape == (n_avs,)
 
         # Update desired speed based on safety.
         v_des = np.clip(
@@ -330,11 +335,11 @@ class BottleneckEnv(TrafficEnv):
         self.prev_accel = accel
 
         # Make sure speed is not negative.
-        accel = np.clip(accel, a_min=-v_t / self.dt, a_max=np.inf)
+        accel = np.clip(accel, a_min=-v_t/self.dt, a_max=np.inf)
 
         return accel
 
-    def get_state(self):  # TODO
+    def get_state(self, av_indices):
         """Return the agent's observation.
 
         This observation consists of:
@@ -348,21 +353,24 @@ class BottleneckEnv(TrafficEnv):
         speed_scale = 40.
         h_scale = 100.
 
-        return []
+        # current state information
+        n_avs = len(av_indices)
+        t = len(self.x)
+        t0 = max(0, t - history_length)
+        x_t = self.x[-1][av_indices]
+        v_t = self.v[-1][av_indices]
+        xl_t = self.x[-1][av_indices - 1]
+        vl_t = [self.v[ti][av_indices - 1] for ti in range(t0, t)]
+        h_t = xl_t - x_t - VEHICLE_LENGTH
 
-        # t = len(x_av)
-        # t0 = max(0, t - history_length)
-        #
-        # x_t = x_av[-1]
-        # v_t = v_av[-1]
-        # h_t = x_leader[t-1] - x_t - VEHICLE_LENGTH
-        #
-        # obs = np.array(
-        #     [h_t / h_scale, v_t / speed_scale]
-        #     + [0.] * (history_length - t + t0)
-        #     + [val / speed_scale for val in v_leader[t0:t]])
-        #
-        # return [obs]
+        obs = []
+        for i in range(n_avs):
+            obs.append(np.array(
+                [h_t[i] / h_scale, v_t[i] / speed_scale]
+                + [0.] * (history_length - t + t0)
+                + [arr[i] / speed_scale for arr in vl_t]))
+
+        return obs
 
     def update_tse(self):
         if self.t > 0 and self.t % int(T_DELAY / self.dt) == 0:

@@ -276,7 +276,7 @@ class TrajectoryEnv(TrafficEnv):
 
         # Check for a collision.
         h_t = self.x[-2][len(self.x[-1]) - 1] - self.x[-1][-1] - VEHICLE_LENGTH
-        if h_t <= 0:
+        if np.any(h_t <= 0):
             print("Collision")
             done = True
 
@@ -302,7 +302,7 @@ class TrajectoryEnv(TrafficEnv):
         # failsafe parameters
         h_min = 5.
         tau = 5.
-        th_min = 0.5  # TODO: 1.0
+        th_min = 0.5
 
         t = len(self.x[-1]) - 1
         x_t = self.x[-1][-1]
@@ -320,7 +320,7 @@ class TrajectoryEnv(TrafficEnv):
             a_lead = 0.
 
         # Get desired speed from action.
-        v_des = min(35., v_t + action[0][0])  # TODO: 40.
+        v_des = min(40., v_t + action[0][0])
 
         # Update desired speed based on safety.
         v_des = max(0., min(

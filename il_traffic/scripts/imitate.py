@@ -89,11 +89,6 @@ def parse_args(args):
         default=DAGGER_PARAMS["l2_penalty"],
         help="scale for the L2 regularization penalty")
     parser.add_argument(
-        '--batch_size',
-        type=int,
-        default=DAGGER_PARAMS["batch_size"],
-        help='the number of elements in a batch when performing SGD')
-    parser.add_argument(
         '--buffer_size',
         type=int,
         default=DAGGER_PARAMS["buffer_size"],
@@ -216,7 +211,7 @@ class Trainer(object):
         # Create the environment.
         if env_name == "i24":
             from il_traffic.environments.trajectory import TrajectoryEnv
-            self.env = TrajectoryEnv(n_vehicles=200, av_penetration=0.04)
+            self.env = TrajectoryEnv(n_vehicles=25, av_penetration=0.04)
         elif env_name == "bottleneck":
             from il_traffic.environments.bottleneck import BottleneckEnv
             self.env = BottleneckEnv(n_vehicles=1400, av_penetration=0.04)
@@ -398,7 +393,6 @@ def main(args):
             alg_params = dict(
                 learning_rate=flags.learning_rate,
                 l2_penalty=flags.l2_penalty,
-                batch_size=flags.batch_size,
                 buffer_size=flags.buffer_size,
                 num_train_steps=flags.num_train_steps,
             )

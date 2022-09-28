@@ -9,10 +9,10 @@ from copy import deepcopy
 from collections import deque
 
 # vehicle length, in meters
-VEHICLE_LENGTH = 4.
+VEHICLE_LENGTH = 5.  # 4. TODO
 # car-following parameters
 IDM_COEFFS = {
-    "v0": 45,  # 33,
+    "v0": 45,  # 33, TODO
     "T": 1.,
     "a": 1.3,
     "b": 2.0,
@@ -355,11 +355,11 @@ class TrafficEnv(gym.Env):
         mpg = []
         distance = []
         for i in range(len(x)):
-            xi = np.array(x[i])#[:-1]
-            vi = np.array(v[i])#[:-1]
-            ai = np.array(a[i])
+            xi = x[i] = np.array(x[i])#[:-1]  TODO
+            vi = v[i] = np.array(v[i])#[:-1]
+            ai = a[i] = np.array(a[i])
 
-            # Remove outside of bounds.
+            # Remove outside of bounds.  TODO
             # xmin = 0
             # xmax = 12000
             # vi = vi[(xmin <= xi) & (xi <= xmax)]
@@ -374,10 +374,21 @@ class TrafficEnv(gym.Env):
             mpg.append(
                 ((xi[-1] - xi[0]) / 1609.34) / (sum(energy) / 3600 * dt))
 
-        h = np.array(x[:-1:incr]) - np.array(x[1::incr]) - VEHICLE_LENGTH
-        v = np.array(v[1::incr])
-        th = h / np.clip(v, a_min=1, a_max=np.inf)
-        th = th.flatten()[v.flatten() >= 1]
+        n_vehicles = len(v)
+        h = []
+        speed = []
+        th = []
+        for i in range(1, n_vehicles, incr):
+            # Find length of leader and ego trajectories.
+            n = len(x[i-1])
+            m = len(x[i])
+
+            # Collect and store relevant data.
+            speed.extend(v[i])
+            h_i = x[i-1][:min(n, m)] - x[i] - VEHICLE_LENGTH
+            h.extend(list(h_i))
+            th_i = h_i / np.clip(v[i], a_min=1, a_max=np.inf)
+            th.extend(list(th_i.flatten()[v[i].flatten() >= 1]))
 
         ret = {
             "vmt": np.mean(distance),

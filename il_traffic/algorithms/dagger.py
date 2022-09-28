@@ -21,11 +21,9 @@ from il_traffic.utils.misc import dict_update
 
 DAGGER_PARAMS = dict(
     # the model learning rate
-    learning_rate=1e-3,
+    learning_rate=1e-4,
     # scale for the L2 regularization penalty
     l2_penalty=0.,
-    # the number of elements in a batch when performing SGD
-    batch_size=128,
     # the maximum number of samples to store
     buffer_size=2000000,
     # number of times a training operation is run in a given iteration
@@ -50,7 +48,6 @@ class DAgger(ILAlgorithm):
         # Extract algorithm parameters.
         self.learning_rate = alg_params["learning_rate"]
         self.l2_penalty = alg_params["l2_penalty"]
-        self.batch_size = alg_params["batch_size"]
         self.buffer_size = alg_params["buffer_size"]
         self.num_train_steps = alg_params["num_train_steps"]
 
@@ -81,7 +78,7 @@ class DAgger(ILAlgorithm):
             weight_decay=self.l2_penalty)
 
         # Create the loss function.
-        self._loss_fn = nn.HuberLoss()  # TODO: nn.MSELoss()
+        self._loss_fn = nn.MSELoss()
 
     def save(self, log_dir, epoch):
         """See parent class."""
