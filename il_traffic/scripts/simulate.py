@@ -3,6 +3,8 @@
 Usage
     python simulate.py --network_type "i24" --n_vehicles 100
 """
+import json
+import os
 import sys
 import argparse
 import warnings
@@ -45,6 +47,36 @@ def parse_args(args):
         type=float,
         default=0,
         help='AV penetration rate')
+    parser.add_argument(
+        '--bn_coeff',
+        type=float,
+        default=0.8,
+        help='TODO')
+    parser.add_argument(
+        '--v_init',
+        type=float,
+        default=28.,
+        help='TODO')
+    parser.add_argument(
+        '--c1',
+        type=float,
+        default=0.8,
+        help='TODO')
+    parser.add_argument(
+        '--c2',
+        type=float,
+        default=28.,
+        help='TODO')
+    parser.add_argument(
+        '--th_target',
+        type=float,
+        default=0.8,
+        help='TODO')
+    parser.add_argument(
+        '--sigma',
+        type=float,
+        default=28.,
+        help='TODO')
     parser.add_argument(  # TODO
         '--save_video',
         action='store_true',
@@ -63,19 +95,42 @@ def main(args):
     # The time when the current experiment started.
     now = strftime("%Y-%m-%d-%H:%M:%S")
 
-    # Create a save directory folder (if it doesn't exist).
-    dir_name = 'simulate/{}/{}'.format(flags.network_type, now)
-
-    # Create the environment.
     if flags.network_type == "i24":
+        # Create a save directory folder (if it doesn't exist).
+        dir_name = 'simulate/{}/{}'.format(flags.network_type, now)
+
+        # Create the environment.
         env = TrajectoryEnv(
             n_vehicles=flags.n_vehicles,
             av_penetration=flags.av_penetration,
         )
     elif flags.network_type == "bottleneck":
+        # Create a save directory folder (if it doesn't exist).
+        dir_name = \
+            'simulate/{}/bn_coeff={}/v_init={}/av_penetration={}'.format(
+                flags.network_type,
+                round(flags.bn_coeff, 1),
+                round(flags.v_init),
+                flags.av_penetration,
+            )
+
+        if flags.av_penetration > 0:
+            dir_name = os.path.join(
+                dir_name,
+                f"c1={flags.c1},c2={flags.c2},th_target={flags.th_target},sigma={flags.sigma}", now)
+        else:
+            dir_name = os.path.join(dir_name, now)
+
+        # Create the environment.
         env = BottleneckEnv(
             n_vehicles=flags.n_vehicles,
             av_penetration=flags.av_penetration,
+            bn_coeff=flags.bn_coeff,
+            v_init=flags.v_init,
+            c1=flags.c1,
+            c2=flags.c2,
+            th_target=flags.th_target,
+            sigma=flags.sigma,
         )
     else:
         raise NotImplementedError("Unknown network type: {}".format(
@@ -93,10 +148,16 @@ def main(args):
     # Compute/display statistics.
     for key in info.keys():
         if key != "expert_action":
+            info[key] = float(info[key])
             print(key, info[key])
 
     # Generate emission files.
     env.gen_emission(flags.network_type, dir_name)
+
+    # Save statistics.
+    del info["expert_action"]
+    with open(os.path.join(dir_name, "metrics.json"), "w") as f:
+        json.dump(info, f)
 
 
 if __name__ == "__main__":

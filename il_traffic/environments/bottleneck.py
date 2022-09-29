@@ -11,20 +11,22 @@ from il_traffic.environments.traffic import NonLocalTrafficFLowHarmonizer
 # position of the bottleneck
 BN_START = 8000
 BN_END = 10000
-# bottleneck speed reduction coefficient
-BN_COEFF = 0.8
 # traffic state estimation time delay (in seconds)
 T_DELAY = 60
 
 
 class BottleneckEnv(TrafficEnv):
 
-    def __init__(self, n_vehicles, av_penetration):
+    def __init__(self, n_vehicles, av_penetration, bn_coeff, v_init, c1, c2, th_target, sigma):
         super(BottleneckEnv, self).__init__(
             n_vehicles=n_vehicles,
             av_penetration=av_penetration,
         )
 
+        # bottleneck coefficient
+        self.bn_coeff = bn_coeff
+        # Initial (and leader-capped) speed of vehicles
+        self.v_init = v_init
         # car-following model coefficients
         self.coeff = get_idm_coeff(network_type="bottleneck")
         # memorization for speed limit for different densities
@@ -55,8 +57,13 @@ class BottleneckEnv(TrafficEnv):
         self.av_indices = incr * np.arange(n_avs, dtype=int) + 1
         # expert controllers
         self.expert = [
-            NonLocalTrafficFLowHarmonizer(dt=self.dt)
-            for _ in range(len(self.av_indices))]
+            NonLocalTrafficFLowHarmonizer(
+                dt=self.dt,
+                c1=c1,
+                c2=c2,
+                th_target=th_target,
+                sigma=sigma,
+            ) for _ in range(len(self.av_indices))]
         # acceleration memory
         self.prev_accel = np.zeros(n_avs, dtype=np.float32)
 
@@ -102,7 +109,7 @@ class BottleneckEnv(TrafficEnv):
         self._inverted = False
 
         # Initial speed of all vehicles
-        v0 = self.coeff["v0"] - 5  # TODO
+        v0 = self.v_init
 
         # Clear data from previous runs.
         self.x = []
@@ -204,6 +211,7 @@ class BottleneckEnv(TrafficEnv):
 
         # Check for a collision
         h_t = x_tp1[:-1] - x_tp1[1:] - self.coeff["vlength"]
+        collision = any(h_t <= 0)
         if any(h_t <= 0):
             print("Collision")
             done = True
@@ -219,7 +227,7 @@ class BottleneckEnv(TrafficEnv):
         av_indices = self._get_indices()
         next_obs = self.get_state(av_indices)
         reward = 0.
-        info = {"expert_action": expert_action}
+        info = {"expert_action": expert_action, "collision": int(collision)}
 
         if done:
             info.update(self.compute_metrics(network_type="bottleneck"))
@@ -281,7 +289,7 @@ class BottleneckEnv(TrafficEnv):
             if n_veh in self._sl:
                 sl = self._sl[n_veh]
             else:
-                sl = self.get_v_of_k(k_bn) * BN_COEFF
+                sl = self.get_v_of_k(k_bn) * self.bn_coeff
                 self._sl[n_veh] = sl
         else:
             sl = self.coeff["v0"]

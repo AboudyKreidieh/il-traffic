@@ -139,7 +139,7 @@ class PFM2019RAV4(object):
 class NonLocalTrafficFLowHarmonizer(object):
     """A controller that gradually pushes traffic near downstream speeds."""
 
-    def __init__(self, dt):
+    def __init__(self, dt, c1=2.0, c2=0.5, th_target=2., sigma=3000.):
         """Instantiate the vehicle class."""
         self.dt = dt
         self.accel = 0.
@@ -151,14 +151,14 @@ class NonLocalTrafficFLowHarmonizer(object):
         # estimation type. One of: {"uniform", "gaussian"}
         self._estimation_type = "uniform"
         # scaling term for the response to the proportional error
-        self.c1 = 2.0
+        self.c1 = c1
         # scaling term for the response to the differential error
-        self.c2 = 0.5
+        self.c2 = c2
         # target time headway, in seconds
-        self.th_target = 2.
+        self.th_target = th_target
         # standard deviation for the Gaussian smoothing kernel, in meters.
         # For uniform smoothing, this acts as the smoothing window.
-        self.sigma = 3000.
+        self.sigma = sigma
 
         # =================================================================== #
         #                   lower-level control parameters                    #
