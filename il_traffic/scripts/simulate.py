@@ -107,17 +107,17 @@ def main(args):
     elif flags.network_type == "bottleneck":
         # Create a save directory folder (if it doesn't exist).
         dir_name = \
-            'simulate/{}/bn_coeff={}/v_init={}/av_penetration={}'.format(
+            'simulate/{}/bn_coeff={}/pen={}'.format(
                 flags.network_type,
                 round(flags.bn_coeff, 1),
-                round(flags.v_init),
+                # round(flags.v_init),
                 flags.av_penetration,
             )
 
         if flags.av_penetration > 0:
             dir_name = os.path.join(
                 dir_name,
-                f"c1={flags.c1},c2={flags.c2},th_target={flags.th_target},sigma={flags.sigma}", now)
+                f"c1={flags.c1},c2={flags.c2},w={flags.sigma}", now)
         else:
             dir_name = os.path.join(dir_name, now)
 

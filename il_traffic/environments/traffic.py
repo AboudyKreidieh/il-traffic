@@ -357,6 +357,10 @@ class TrafficEnv(gym.Env):
         """Return data for saving, analysis, and plotting purposes."""
         raise NotImplementedError
 
+    # ======================================================================= #
+    #                       Visualization / evaluation                        #
+    # ======================================================================= #
+
     def compute_metrics(self, network_type):
         assert network_type in ["i24", "bottleneck"]
 
@@ -367,15 +371,21 @@ class TrafficEnv(gym.Env):
         energy_model = PFM2019RAV4()
         mpg = []
         distance = []
+        veh_count = {3500: 0, 7000: 0, 10500: 0}
         for i in range(len(x)):
             ai = a[i] = np.array(a[i])
             xi = x[i] = np.array(x[i])[:len(ai)]
             vi = v[i] = np.array(v[i])[:len(ai)]
 
+            if network_type == "bottleneck":
+                for pos in veh_count.keys():
+                    if np.any(xi <= pos) and np.any(xi > pos):
+                        veh_count[pos] += 1
+
             # Remove outside of bounds.
             if network_type == "bottleneck":
                 xmin = 0
-                xmax = 12000
+                xmax = 8000
             else:
                 xmin = -float("inf")  # TODO: 0
                 xmax = float("inf")
@@ -391,9 +401,10 @@ class TrafficEnv(gym.Env):
                 distance.append(0)
                 mpg.append(0)
             else:
-                dist = (xi[-1] - xi[0]) / 1609.34
-                distance.append(dist)
-                mpg.append(dist / (sum(energy) / 3600 * dt))
+                if sum(energy) > 0:
+                    dist = (xi[-1] - xi[0]) / 1609.34
+                    distance.append(dist)
+                    mpg.append(dist / (sum(energy) / 3600 * dt))
 
         n_vehicles = len(v)
         h = []
@@ -413,7 +424,7 @@ class TrafficEnv(gym.Env):
             th.extend(list(th_i.flatten()[v[i].flatten() >= 1]))
 
         ret = {
-            "vmt": np.mean(distance),
+            "tmt": np.sum(distance),
             "mpg": np.mean(mpg),
             "h_max": np.max(h),
             "h_min": np.min(h),
@@ -422,6 +433,13 @@ class TrafficEnv(gym.Env):
             "th_min": np.min(th),
             "th_avg": np.mean(th),
         }
+
+        if network_type == "bottleneck":
+            # TODO: technically the same as vehicle count since t_total is
+            #  equal to one hour.
+            throughput = {pos: veh_count[pos] for pos in veh_count.keys()}
+            for pos in throughput.keys():
+                ret[f"q_{pos}"] = throughput[pos]
 
         if self.av_penetration > 0:
             ret["av_mpg"] = np.mean(mpg[1::incr])
@@ -447,7 +465,9 @@ class TrafficEnv(gym.Env):
         os.makedirs(emission_path, exist_ok=True)
 
         pd.DataFrame.from_dict(data).to_csv(
-            os.path.join(emission_path, "trajectory.csv"), index=False)
+            os.path.join(emission_path, "trajectory.csv"),
+            float_format='%g',
+            index=False)
 
         self.plot_statistics(network_type, emission_path)
 
@@ -480,7 +500,7 @@ class TrafficEnv(gym.Env):
             plt.plot(times, np.array(x[i]) / 1000, c='k')
         plt.grid(linestyle='--')
         if network_type == "bottleneck":
-            plt.ylim([0, 12])
+            plt.ylim([0, 10.75])
         # else:  TODO
         #     plt.ylim([0, max([max(x[i] for i in range(len(x)))])])
         plt.xticks(fontsize=15)
