@@ -462,8 +462,10 @@ class TrafficEnv(gym.Env):
                 data["v"].append(vi[t])
                 data["a"].append(ai[t] if t < len(ai) else 0.)
 
+        # Create folder.
         os.makedirs(emission_path, exist_ok=True)
 
+        # Save data.
         pd.DataFrame.from_dict(data).to_csv(
             os.path.join(emission_path, "trajectory.csv"),
             float_format='%g',

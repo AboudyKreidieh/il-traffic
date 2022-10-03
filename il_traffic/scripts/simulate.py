@@ -117,7 +117,11 @@ def main(args):
         if flags.av_penetration > 0:
             dir_name = os.path.join(
                 dir_name,
-                f"c1={flags.c1},c2={flags.c2},w={flags.sigma}", now)
+                f"c1={flags.c1}",
+                f"c2={flags.c2}",
+                f"w={flags.sigma}",
+                # now,
+            )
         else:
             dir_name = os.path.join(dir_name, now)
 

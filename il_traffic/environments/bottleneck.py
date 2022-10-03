@@ -17,7 +17,15 @@ T_DELAY = 60
 
 class BottleneckEnv(TrafficEnv):
 
-    def __init__(self, n_vehicles, av_penetration, bn_coeff, v_init, c1, c2, th_target, sigma):
+    def __init__(self,
+                 n_vehicles,
+                 av_penetration,
+                 bn_coeff,
+                 v_init,
+                 c1,
+                 c2,
+                 th_target,
+                 sigma):
         super(BottleneckEnv, self).__init__(
             n_vehicles=n_vehicles,
             av_penetration=av_penetration,
@@ -42,7 +50,7 @@ class BottleneckEnv(TrafficEnv):
         # time counter
         self.t = 0
         # time horizon, in steps
-        self.horizon = 20000
+        self.horizon = 36000
         # equilibrium speed for a given density
         self.get_v_of_k = inversefunc(self.get_k_of_v)
 
@@ -134,8 +142,9 @@ class BottleneckEnv(TrafficEnv):
             self.prev_accel = np.zeros(n_avs)
 
             # Get initial state.
-            av_indices = self._get_indices()
-            state = self.get_state(av_indices)
+            # av_indices = self._get_indices()
+            # state = self.get_state(av_indices)
+            state = []
         else:
             state = []
 
@@ -224,8 +233,8 @@ class BottleneckEnv(TrafficEnv):
             next_obs, reward, done, info = self.step(action=None)
 
         # Return state and expert action.
-        av_indices = self._get_indices()
-        next_obs = self.get_state(av_indices)
+        # av_indices = self._get_indices()
+        next_obs = []  # self.get_state(av_indices)
         reward = 0.
         info = {"expert_action": expert_action, "collision": int(collision)}
 
@@ -411,6 +420,10 @@ class BottleneckEnv(TrafficEnv):
                 if index == len(self.x_seg):
                     break
                 speeds[index].append(v[i])
+
+            for i in range(len(speeds)):
+                if len(speeds[i]) == 0:
+                    speeds[i].append(self.coeff["v0"])
 
             # Update variable.
             self.v_seg = np.array(
